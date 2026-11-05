@@ -1,0 +1,30 @@
+# Releases stage a version on npm through trusted publishing (OIDC, no token stored anywhere). The trusted publisher is
+# allowed only "npm stage publish": a maintainer approves the staged version on npmjs.com with 2FA, so a compromised
+# workflow alone cannot publish. The very first version was published by hand, since npm sets up trusted publishing on an
+# existing package. To release: bump the version in package.json, src/version.ts and CHANGELOG.md, push, then push the
+# tag vX.Y.Z.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@11.20.0
+      - name: The tag must match the package version
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - run: npm ci
+      - run: npm run check
+      - run: npm stage publish . --access public --provenance

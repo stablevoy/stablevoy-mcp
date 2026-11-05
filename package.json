@@ -1,0 +1,61 @@
+{
+  "name": "stablevoy-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for Stablevoy: create USDT and USDC invoices and check payments from Claude, Cursor or any MCP client. Non-custodial: the keys cannot move funds.",
+  "keywords": [
+    "mcp",
+    "model context protocol",
+    "stablevoy",
+    "usdt",
+    "usdc",
+    "stablecoin",
+    "crypto payments",
+    "invoices",
+    "claude",
+    "cursor"
+  ],
+  "homepage": "https://stablevoy.com/mcp/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stablevoy/stablevoy-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stablevoy/stablevoy-mcp/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "bin": {
+    "stablevoy-mcp": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && chmod +x dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --coverage",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && node scripts/smoke.js",
+    "prepublishOnly": "npm run check"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "stablevoy": "file:../stablevoy-node",
+    "zod": "4.6.7"
+  }
+}
