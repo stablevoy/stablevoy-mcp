@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- New tool cancel_invoice: cancels an invoice no payment has been seen for, so the payment page tells the buyer not to pay and the shop gets the invoice.cancelled webhook. A paid or partly paid invoice is refused with invoice_not_cancellable; money that still arrives after a cancel marks the invoice paid_late. Without store it is tried in each connected store, and only the store that owns the invoice can cancel it. Not offered in read-only mode.
+- create_invoice takes expiresInMinutes, how long the buyer has to pay (15 to 10080 minutes; the store default when left out), and its description says what expiresAt means and that the payment link is sent to the buyer by you.
+- Error hints for invoice_not_cancellable, invalid_invoice_lifetime and conflict.
+- Tool descriptions say that each call uses the store's API key and how failures come back, when to pass store, the list_invoices filters with their formats, and that a changed amount means cancelling the unpaid invoice first. list_invoices accepts the status cancelled.
+- Uses the stablevoy SDK 1.6.0.
+
 ## 0.1.2
 
 - Clearer tool descriptions: each one says what it returns, when to use it and which tool to use instead, and get_invoice and list_invoices say what happens when nothing is found. Tool names, inputs and behavior are unchanged.

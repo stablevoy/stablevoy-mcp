@@ -48,20 +48,23 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
   it('lists every tool with annotations, and none that writes in read-only mode', async () => {
     const { client } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(['create_invoice', 'get_invoice', 'get_store', 'list_invoices', 'list_stores']);
+    const writes = ['cancel_invoice', 'create_invoice'];
+    expect(tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_invoice', 'get_store', 'list_invoices', 'list_stores']);
     expect(tools.find((t) => t.name === 'create_invoice')?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
-    expect(tools.filter((t) => t.name !== 'create_invoice').every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
+    expect(tools.find((t) => t.name === 'cancel_invoice')?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
+    expect(tools.filter((t) => !writes.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
     expect(client.getInstructions()).toBe(SERVER_INSTRUCTIONS);
     const readOnly = await serverWith([{ routes: storeRoutes('Main', 's1') }], true);
-    expect((await readOnly.client.listTools()).tools.map((t) => t.name)).not.toContain('create_invoice');
+    const offered = (await readOnly.client.listTools()).tools.map((t) => t.name);
+    for (const name of writes) expect(offered).not.toContain(name);
   });
 
   it('describes every tool with a verb first and the sibling to use instead (spec SPEC-mcp-tool-descriptions)', async () => {
     const { client } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
     const described = Object.fromEntries((await client.listTools()).tools.map((t) => [t.name, t.description ?? '']));
-    const sibling: Record<string, string> = { list_stores: 'get_store', get_store: 'list_stores', get_invoice: 'list_invoices', list_invoices: 'get_invoice', create_invoice: 'get_invoice' };
+    const sibling: Record<string, string> = { list_stores: 'get_store', get_store: 'list_stores', get_invoice: 'list_invoices', list_invoices: 'get_invoice', create_invoice: 'get_invoice', cancel_invoice: 'get_invoice' };
     for (const [name, other] of Object.entries(sibling)) {
-      expect(described[name], name).toMatch(/^(Lists|Gets|Creates) /);
+      expect(described[name], name).toMatch(/^(Lists|Gets|Creates|Cancels) /);
       expect(described[name], name).toContain(other);
     }
   });
@@ -99,6 +102,31 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
 
     await again.call('create_invoice', { amountUsd: '5' });
     expect(again.fakes[0]?.sent.at(-1)?.headers['idempotency-key']).toBeUndefined();
+
+    await again.call('create_invoice', { amountUsd: '5', expiresInMinutes: 1440 });
+    expect(again.fakes[0]?.sent.at(-1)?.body).toEqual({ amountUsdCents: 500, expiresInMinutes: 1440 });
+    const outside = await again.call('create_invoice', { amountUsd: '5', expiresInMinutes: 5 });
+    expect(outside.isError).toBe(true);
+    expect(again.fakes[0]?.sent.at(-1)?.body).toEqual({ amountUsdCents: 500, expiresInMinutes: 1440 });
+  });
+
+  it('cancels an invoice in whichever store has it, and passes a refusal with a hint', async () => {
+    const invoice = { ...example('POST', '/v1/invoices/{invoiceId}/cancel', 200), id: INVOICE, status: 'cancelled' };
+    const path = `POST /v1/invoices/${INVOICE}/cancel`;
+    const { call, fakes } = await serverWith([
+      { routes: storeRoutes('Main', 's1', { [path]: () => ({ status: 404, body: problem(404, 'not_found', 'Invoice not found') }) }), known: { id: 's1', name: 'Main' } },
+      { routes: storeRoutes('Second', 's2', { [path]: () => ({ status: 200, body: invoice }) }), known: { id: 's2', name: 'Second' } },
+    ]);
+    const cancelled = await call('cancel_invoice', { invoiceId: INVOICE });
+    expect(cancelled.structuredContent).toMatchObject({ store: 'Second', id: INVOICE, status: 'cancelled' });
+    expect(textOf(cancelled).startsWith(`Invoice ${INVOICE} of store "Second" is cancelled.`)).toBe(true);
+    expect(fakes.map((f) => f.sent.filter((s) => s.key === path).length)).toEqual([1, 1]);
+    expect(textOf(await call('cancel_invoice', { invoiceId: INVOICE, store: 'Main' }))).toBe(`not_found: no connected store has invoice ${INVOICE}.`);
+
+    const paid = await serverWith([{ routes: storeRoutes('Main', 's1', { [path]: () => ({ status: 409, body: problem(409, 'invoice_not_cancellable', 'Only an invoice that is still waiting for its first payment can be cancelled.') }) }) }]);
+    const refused = await paid.call('cancel_invoice', { invoiceId: INVOICE });
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toContain('invoice_not_cancellable: Only an invoice that is still waiting for its first payment can be cancelled. A payment has already been seen');
   });
 
   it('refuses a bad amount or return address before calling the API, and passes the API refusal with a hint', async () => {

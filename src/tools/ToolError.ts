@@ -11,6 +11,9 @@ const HINTS: Readonly<Record<string, string>> = {
   amount_above_store_limit: 'The amount is above the store maximum; call get_store for the limits.',
   amount_above_platform_cap: 'The amount is above the platform maximum; call get_store for the limits.',
   store_disabled: 'The store is disabled in the Stablevoy dashboard. Do not retry.',
+  invoice_not_cancellable: 'A payment has already been seen, or the invoice is no longer waiting for one; call get_invoice for its status. Do not retry.',
+  invalid_invoice_lifetime: 'expiresInMinutes must be from 15 to 10080; leave it out for the store default.',
+  conflict: 'The same amount and reference were used before with other parameters, or the invoice changed at the same moment; call get_invoice or list_invoices to see it, or use another reference.',
 };
 
 /**

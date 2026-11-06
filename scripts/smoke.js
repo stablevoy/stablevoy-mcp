@@ -29,7 +29,7 @@ if (init.result?.serverInfo?.name !== 'stablevoy-mcp' || init.result.serverInfo.
 send({ method: 'notifications/initialized' });
 const list = await request(2, 'tools/list', {});
 const names = list.result.tools.map((t) => t.name).sort().join(',');
-if (names !== 'create_invoice,get_invoice,get_store,list_invoices,list_stores') throw new Error(`smoke: unexpected tools ${names}`);
+if (names !== 'cancel_invoice,create_invoice,get_invoice,get_store,list_invoices,list_stores') throw new Error(`smoke: unexpected tools ${names}`);
 clearTimeout(timer);
 child.kill();
 console.log(`smoke ok ${pkg.version}: ${names}`);

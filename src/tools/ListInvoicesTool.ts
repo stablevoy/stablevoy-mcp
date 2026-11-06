@@ -26,9 +26,9 @@ export class ListInvoicesTool implements Tool {
   readonly name = 'list_invoices';
   readonly title = 'List invoices';
   readonly description =
-    'Lists invoices newest first, to find invoices when you do not have an id: filter by status, source, a search (invoice id or the start of the reference) and the UTC days they were created. Returns pages: for each store its name, invoices (the same fields as get_invoice) and nextCursor, null on the last page. One page per call; pass nextCursor as cursor together with the same store to get the next page. Without store and with several stores, one page per store. No match gives an empty list, not an error. Use get_invoice for one invoice by id.';
+    'Lists invoices newest first, to find invoices when you do not have an id. Filters, all optional and combined: status, source, search (an invoice id or the start of the reference), createdFrom and createdTo (UTC days as YYYY-MM-DD, both included), and limit (1 to 100, 20 by default). Returns pages: for each store its name, invoices (the same fields as get_invoice) and nextCursor, null on the last page. Each call returns one page. For the next one, pass nextCursor as cursor with the same store. Without store and with several stores, you get one page per store. No match gives an empty list, not an error. Use get_invoice for one invoice by id. Uses the store\'s API key; a failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = {
-    status: z.string().min(1).max(40).optional().describe('awaiting_payment, confirming, paid, overpaid, underpaid, paid_late, expired or on_hold.'),
+    status: z.string().min(1).max(40).optional().describe('awaiting_payment, confirming, paid, overpaid, underpaid, paid_late, expired, on_hold or cancelled.'),
     source: z.string().min(1).max(40).optional().describe('How the invoice was made: payment_link, woocommerce, edd, whmcs, api_key or not_recorded.'),
     search: z.string().min(1).max(200).optional().describe('Invoice id or the start of the reference.'),
     createdFrom: z.string().regex(DAY).optional().describe('First UTC day, YYYY-MM-DD.'),
