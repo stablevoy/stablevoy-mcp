@@ -1,0 +1,35 @@
+# Lists the server in the official MCP Registry (registry.modelcontextprotocol.io) under io.github.stablevoy. The
+# registry grants the organization namespace only to a GitHub Actions OIDC token from a repository of the organization:
+# the interactive "mcp-publisher login github" cannot read the organization role. No token is stored anywhere.
+# Run it by hand (Actions, Registry, Run workflow) once the npm version named in server.json is published, since the
+# registry checks the package on npm and its mcpName.
+name: Registry
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  MCP_PUBLISHER_VERSION: '1.8.7'
+  MCP_PUBLISHER_SHA256: '00b21004149a4ce66f0782508ae4a2bce67d1bea395a8da0bd8028159fb59579'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: server.json must name the package version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "$(node -p "require('./server.json').version")" = "$version"
+          test "$(node -p "require('./server.json').packages[0].version")" = "$version"
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL -o mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish
