@@ -26,7 +26,7 @@ export class ListInvoicesTool implements Tool {
   readonly name = 'list_invoices';
   readonly title = 'List invoices';
   readonly description =
-    'Invoices newest first, filtered by status, source, a search (invoice id or the start of the reference) and the UTC days they were created. One page per call; pass cursor with store to get the next page. Without store and with several stores, one page per store.';
+    'Lists invoices newest first, to find invoices when you do not have an id: filter by status, source, a search (invoice id or the start of the reference) and the UTC days they were created. Returns pages: for each store its name, invoices (the same fields as get_invoice) and nextCursor, null on the last page. One page per call; pass nextCursor as cursor together with the same store to get the next page. Without store and with several stores, one page per store. No match gives an empty list, not an error. Use get_invoice for one invoice by id.';
   readonly input = {
     status: z.string().min(1).max(40).optional().describe('awaiting_payment, confirming, paid, overpaid, underpaid, paid_late, expired or on_hold.'),
     source: z.string().min(1).max(40).optional().describe('How the invoice was made: payment_link, woocommerce, edd, whmcs, api_key or not_recorded.'),

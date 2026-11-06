@@ -13,7 +13,8 @@ import { toolResult } from './ToolResult.js';
 export class GetInvoiceTool implements Tool {
   readonly name = 'get_invoice';
   readonly title = 'Read an invoice';
-  readonly description = 'An invoice by its id: status, amount, payments received (network, token, amount in the token smallest units, transaction hash), and when it was paid or expires.';
+  readonly description =
+    "Gets one invoice by its id when you already have the id, for example from create_invoice or list_invoices. Returns id, status, amountUsd, reference, createdAt, expiresAt, paidAt, holdReason, networks and payments (network, token, amount in the token's smallest units, txHash, status, detectedAt). Without store it looks in every connected store; an id no store has gives a not_found error. To find invoices by status, reference or date, use list_invoices.";
   readonly input = { invoiceId: z.uuid().describe('The invoice id.'), store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 

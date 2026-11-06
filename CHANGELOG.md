@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Clearer tool descriptions: each one says what it returns, when to use it and which tool to use instead, and get_invoice and list_invoices say what happens when nothing is found. Tool names, inputs and behavior are unchanged.
+
 ## 0.1.1
 
 - After npx stablevoy-mcp login the browser lands on a page of the Stablevoy site that shows the real result: connected only once the keys are saved, otherwise failed, or mismatch for a link of another login. Before, a bare page said connected as soon as the code arrived, even when the exchange then failed.

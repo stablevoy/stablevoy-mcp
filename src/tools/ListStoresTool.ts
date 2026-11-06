@@ -9,7 +9,8 @@ import { toolResult } from './ToolResult.js';
 export class ListStoresTool implements Tool {
   readonly name = 'list_stores';
   readonly title = 'List connected stores';
-  readonly description = 'The Stablevoy stores this server can work with: id, name, status, enabled networks, whether payments can be accepted and the EVM payout status. Call it to learn store names before using the store argument.';
+  readonly description =
+    'Lists the Stablevoy stores this server can work with. Returns stores: one entry per connected store with id, name, status, enabledNetworks, canAcceptPayments and evmPayoutStatus, or an error for a store whose key no longer works. Call it first to learn store names for the store argument of the other tools; use get_store for the full settings of one store.';
   readonly input = {};
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 

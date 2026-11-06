@@ -14,7 +14,7 @@ export class CreateInvoiceTool implements Tool {
   readonly name = 'create_invoice';
   readonly title = 'Create an invoice';
   readonly description =
-    'Creates a Stablevoy invoice the buyer pays in USDT or USDC, and returns its payment link (checkoutUrl). Give a reference (for example "acme-october") whenever you can: the same amount and reference return the same invoice instead of a second one. Without a reference every call creates a new invoice.';
+    'Creates a Stablevoy invoice the buyer pays in USDT or USDC, and returns its payment link (checkoutUrl). Give a reference (for example "acme-october") whenever you can: the same amount and reference return the same invoice instead of a second one. Without a reference every call creates a new invoice. Check the result later with get_invoice.';
   readonly input = {
     amountUsd: z.string().describe('Amount in US dollars as a decimal string, for example "250" or "19.99".'),
     reference: z.string().min(1).max(200).optional().describe('Your reference for this invoice, sent back in webhooks, 1 to 200 characters.'),

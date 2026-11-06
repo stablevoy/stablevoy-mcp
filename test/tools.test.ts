@@ -56,6 +56,16 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     expect((await readOnly.client.listTools()).tools.map((t) => t.name)).not.toContain('create_invoice');
   });
 
+  it('describes every tool with a verb first and the sibling to use instead (spec SPEC-mcp-tool-descriptions)', async () => {
+    const { client } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
+    const described = Object.fromEntries((await client.listTools()).tools.map((t) => [t.name, t.description ?? '']));
+    const sibling: Record<string, string> = { list_stores: 'get_store', get_store: 'list_stores', get_invoice: 'list_invoices', list_invoices: 'get_invoice', create_invoice: 'get_invoice' };
+    for (const [name, other] of Object.entries(sibling)) {
+      expect(described[name], name).toMatch(/^(Lists|Gets|Creates) /);
+      expect(described[name], name).toContain(other);
+    }
+  });
+
   it('lists the stores, a failing key shown with its error and the others still', async () => {
     const { call } = await serverWith([{ routes: storeRoutes('Main', 's1') }, { routes: { 'GET /v1/store': () => ({ status: 401, body: problem(401, 'authentication_failed', 'Invalid API key') }) }, known: { id: 's2', name: 'Old' } }]);
     const result = await call('list_stores');

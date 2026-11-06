@@ -12,7 +12,7 @@ export class GetStoreTool implements Tool {
   readonly name = 'get_store';
   readonly title = 'Read a store and its settings';
   readonly description =
-    'A store with its settings: status, enabled networks, networks without a payout wallet, the payout addresses, the EVM payout status and the networks it blocks, invoice limits (store, platform and the range in effect), fee, website, return and webhook URLs. Read only: settings change in the Stablevoy dashboard. Call it first when an invoice fails.';
+    'Gets one store with its settings: status, enabled networks, networks without a payout wallet, payout addresses, the EVM payout status and the networks it blocks, invoice limits (store, platform and the range in effect), fee, website, return and webhook URLs. Call it first when create_invoice fails or a store cannot accept payments; use list_stores to see all stores briefly. Read only: settings change in the Stablevoy dashboard.';
   readonly input = { store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
