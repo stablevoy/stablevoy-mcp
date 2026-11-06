@@ -8,6 +8,11 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+    ignore:
+      # typescript-eslint supports TypeScript below 6.1 only (8.72.1, November 2026): lint fails on 7. Drop this once a
+      # typescript-eslint release accepts TypeScript 7.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
