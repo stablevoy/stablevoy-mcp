@@ -56,7 +56,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
-    "stablevoy": "file:../stablevoy-node",
+    "stablevoy": "^1.5.0",
     "zod": "4.6.7"
   }
 }
