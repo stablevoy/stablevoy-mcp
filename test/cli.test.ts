@@ -46,7 +46,7 @@ describe('the CLI', () => {
     const out = (line: string) => void lines.push(line);
     const revoke = () => Promise.resolve();
     const stores = new StoresCommand({ credentials, revoke, out });
-    const login = new LoginCommand({ credentials, connect: StablevoyConnect.create(), revoke, listen: () => LoopbackListener.start(), openBrowser: () => Promise.resolve(true), connectUrl: config.connectUrl, out, timeoutMs: 10 });
+    const login = new LoginCommand({ credentials, connect: StablevoyConnect.create(), revoke, listen: () => LoopbackListener.start(config.loginDoneUrl), openBrowser: () => Promise.resolve(true), connectUrl: config.connectUrl, out, timeoutMs: 10 });
     return {
       config,
       version: '0.1.0',

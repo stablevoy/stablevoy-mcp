@@ -8,6 +8,7 @@ describe('configuration from the environment', () => {
     expect(configFrom({})).toEqual({
       apiUrl: 'https://api.stablevoy.com',
       connectUrl: 'https://stablevoy.com/app/connect-app/',
+      loginDoneUrl: 'https://stablevoy.com/app/connect-app/done/',
       readOnly: false,
       source: { kind: 'profile', profile: 'default' },
       profile: 'default',
@@ -18,6 +19,9 @@ describe('configuration from the environment', () => {
     const config = configFrom({ STABLEVOY_API_KEY: 'sk_test_abc', STABLEVOY_MCP_PROFILE: 'work', STABLEVOY_MCP_READ_ONLY: 'true', STABLEVOY_API_URL: 'http://localhost:8080/', STABLEVOY_CONNECT_URL: 'http://127.0.0.1:3000/app/connect-app/' });
     expect(config).toMatchObject({ apiUrl: 'http://localhost:8080', connectUrl: 'http://127.0.0.1:3000/app/connect-app/', readOnly: true, source: { kind: 'key', apiKey: 'sk_test_abc' }, profile: 'work' });
     expect(configFrom({ STABLEVOY_MCP_READ_ONLY: 'false', STABLEVOY_API_KEY: '' }).readOnly).toBe(false);
+    // The result page sits under the connect page, with or without its trailing slash or a query.
+    expect(config.loginDoneUrl).toBe('http://127.0.0.1:3000/app/connect-app/done/');
+    expect(configFrom({ STABLEVOY_CONNECT_URL: 'http://localhost:3000/app/connect-app?x=1' }).loginDoneUrl).toBe('http://localhost:3000/app/connect-app/done/');
   });
 
   it('refuses anything it cannot be sure of, loudly', () => {

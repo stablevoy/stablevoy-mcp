@@ -56,6 +56,8 @@ export class LoginCommand {
       const code = await listener.waitForCode(state, this.deps.timeoutMs);
       const connected = await this.deps.connect.exchangeApp({ code, codeVerifier: pkce.verifier });
       await this.deps.credentials.write(profile, { label: name, keys: connected.stores.map((s) => ({ storeId: s.storeId, storeName: s.storeName, apiKey: s.apiKey })) });
+      // Only once the keys are saved; any failure before this reaches the browser as "failed" through close().
+      listener.finish('connected');
       out(`Connected ${connected.stores.map((s) => `"${s.storeName}"`).join(', ')} as "${name}" (profile ${profile}).`);
       const failed = before === null ? [] : await revokeKeys(before.keys, this.deps.revoke, out);
       return failed.length === 0 ? 0 : 1;

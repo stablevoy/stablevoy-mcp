@@ -16,6 +16,7 @@ import { StoresCommand } from '../src/login/StoresCommand.js';
 import { problem } from './support/FakeApi.js';
 
 const CONNECT = 'https://stablevoy.com/app/connect-app/';
+const DONE = 'https://stablevoy.com/app/connect-app/done/';
 
 function exchangeWith(stores: { id: string; name: string; apiKey: string }[], seen: unknown[] = []): StablevoyConnect {
   const fetchFn = ((_url: string, init?: RequestInit) => {
@@ -25,9 +26,17 @@ function exchangeWith(stores: { id: string; name: string; apiKey: string }[], se
   return StablevoyConnect.create({ fetch: fetchFn });
 }
 
+/** The loopback answer as the browser gets it, without following the redirect to the site. */
+async function visit(url: string): Promise<{ status: number; location: string | null }> {
+  const response = await fetch(url, { redirect: 'manual' });
+  return { status: response.status, location: response.headers.get('location') };
+}
+
+const goodCallback = (link: URL) => `${link.searchParams.get('return') ?? ''}?stablevoy_code=${'k'.repeat(43)}&state=${link.searchParams.get('state') ?? ''}`;
+
 /** A browser that follows the approval: the dashboard would redirect it to the loopback address with a code. */
 function browser(opened: URL[], answer: (link: URL) => Promise<void> | void = async (link) => {
-  await fetch(`${link.searchParams.get('return') ?? ''}?stablevoy_code=${'k'.repeat(43)}&state=${link.searchParams.get('state') ?? ''}`);
+  await visit(goodCallback(link));
 }) {
   return (url: string) => {
     const link = new URL(url);
@@ -47,7 +56,7 @@ describe('npx stablevoy-mcp login (spec SPEC-mcp-server 10.2)', () => {
   };
   const out = (line: string) => void lines.push(line);
   const login = (connect: StablevoyConnect, openBrowser: (url: string) => Promise<boolean>, revoker: KeyRevoker = revoke, timeoutMs = 5000) =>
-    new LoginCommand({ credentials, connect, revoke: revoker, listen: () => LoopbackListener.start(), openBrowser, connectUrl: CONNECT, out, timeoutMs });
+    new LoginCommand({ credentials, connect, revoke: revoker, listen: () => LoopbackListener.start(DONE), openBrowser, connectUrl: CONNECT, out, timeoutMs });
 
   beforeEach(async () => {
     credentials = new CredentialStore(await mkdtemp(path.join(tmpdir(), 'svmcp-login-')));
@@ -58,8 +67,15 @@ describe('npx stablevoy-mcp login (spec SPEC-mcp-server 10.2)', () => {
   it('opens the approval page with PKCE and the loopback address, and saves one key per approved store', async () => {
     const opened: URL[] = [];
     const seen: unknown[] = [];
-    const code = await login(exchangeWith([{ id: 's1', name: 'Main', apiKey: 'sk_live_a' }, { id: 's2', name: 'Second', apiKey: 'sk_live_b' }], seen), browser(opened)).run('default', 'work laptop');
+    const landed: { status: number; location: string | null; saved: boolean }[] = [];
+    const follow = browser(opened, async (link) => {
+      const answer = await visit(goodCallback(link));
+      landed.push({ ...answer, saved: (await credentials.read('default')) !== null });
+    });
+    const code = await login(exchangeWith([{ id: 's1', name: 'Main', apiKey: 'sk_live_a' }, { id: 's2', name: 'Second', apiKey: 'sk_live_b' }], seen), follow).run('default', 'work laptop');
     expect(code).toBe(0);
+    // The browser is sent to the result page only once the keys are saved (spec SPEC-mcp-login-done-page 2.2).
+    await expect.poll(() => landed).toEqual([{ status: 302, location: `${DONE}?result=connected`, saved: true }]);
     const link = opened[0] as URL;
     expect(`${link.origin}${link.pathname}`).toBe(CONNECT);
     expect(link.searchParams.get('return')).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/callback$/);
@@ -87,17 +103,56 @@ describe('npx stablevoy-mcp login (spec SPEC-mcp-server 10.2)', () => {
     expect((await credentials.read('default'))?.keys.map((k) => k.apiKey)).toEqual(['sk_live_new1']);
   });
 
+  it('sends the browser to "failed" when the code cannot be exchanged, and saves nothing', async () => {
+    const landed: (string | null)[] = [];
+    const refusal = () => new Response(JSON.stringify(problem(400, 'invalid_connect_code', 'The code is used or expired')), { status: 400, headers: { 'content-type': 'application/problem+json' } });
+    const refusing = StablevoyConnect.create({ fetch: () => Promise.resolve(refusal()) });
+    const follow = browser([], async (link) => void landed.push((await visit(goodCallback(link))).location));
+    await expect(login(refusing, follow).run('default', 'laptop')).rejects.toThrow('The code is used or expired');
+    await expect.poll(() => landed).toEqual([`${DONE}?result=failed`]);
+    expect(await credentials.read('default')).toBeNull();
+  });
+
+  it('sends a callback with another state to "mismatch" and keeps waiting for the right one', async () => {
+    const answers: { status: number; location: string | null }[] = [];
+    const follow = browser([], async (link) => {
+      const back = link.searchParams.get('return') ?? '';
+      answers.push(await visit(`${back}?stablevoy_code=x&state=forged`), await visit(goodCallback(link)));
+    });
+    expect(await login(exchangeWith([{ id: 's1', name: 'Main', apiKey: 'sk_live_a' }]), follow).run('default', 'laptop')).toBe(0);
+    await expect.poll(() => answers).toEqual([
+      { status: 302, location: `${DONE}?result=mismatch` },
+      { status: 302, location: `${DONE}?result=connected` },
+    ]);
+  });
+
   it('ignores a request with another state or path, prints the address when no browser opens, and gives up after the timeout', async () => {
-    const answers: number[] = [];
+    const answers: { status: number; location: string | null }[] = [];
     const tricky = browser([], async (link) => {
       const back = link.searchParams.get('return') ?? '';
-      answers.push((await fetch(`${back}?stablevoy_code=x&state=forged`)).status, (await fetch(back.replace('/callback', '/other'))).status, (await fetch(`${back}?state=${link.searchParams.get('state') ?? ''}`)).status);
+      answers.push(await visit(`${back}?stablevoy_code=x&state=forged`), await visit(back.replace('/callback', '/other')), await visit(`${back}?state=${link.searchParams.get('state') ?? ''}`));
     });
     const failed = login(exchangeWith([]), async (url) => (await tricky(url), false), revoke, 300);
     await expect(failed.run('default', 'laptop')).rejects.toBeInstanceOf(LoginTimeout);
-    expect(answers).toEqual([400, 404, 400]);
+    expect(answers).toEqual([
+      { status: 302, location: `${DONE}?result=mismatch` },
+      { status: 404, location: null },
+      { status: 302, location: `${DONE}?result=mismatch` },
+    ]);
     expect(lines).toContain('The browser did not open by itself: open the address above.');
     expect(await credentials.read('default')).toBeNull();
+  });
+
+  it('holds the browser until finish, sends a second callback for the same login to "mismatch", and finishes once', async () => {
+    const listener = await LoopbackListener.start(DONE);
+    const code = listener.waitForCode('st1', 5000);
+    const first = visit(`${listener.returnUrl}?stablevoy_code=c1&state=st1`);
+    expect(await code).toBe('c1');
+    expect(await visit(`${listener.returnUrl}?stablevoy_code=c1&state=st1`)).toEqual({ status: 302, location: `${DONE}?result=mismatch` });
+    listener.finish('connected');
+    listener.finish('failed');
+    listener.close();
+    expect(await first).toEqual({ status: 302, location: `${DONE}?result=connected` });
   });
 
   it('refuses a computer name the dashboard would refuse', async () => {

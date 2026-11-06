@@ -32,7 +32,7 @@ try {
       credentials,
       connect: StablevoyConnect.create({ baseUrl: config.apiUrl, userAgentSuffix }),
       revoke,
-      listen: () => LoopbackListener.start(),
+      listen: () => LoopbackListener.start(config.loginDoneUrl),
       openBrowser: systemBrowserOpener(process.platform),
       connectUrl: config.connectUrl,
       out,

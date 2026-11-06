@@ -1,6 +1,6 @@
 {
   "name": "stablevoy-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "mcpName": "io.github.stablevoy/stablevoy-mcp",
   "description": "MCP server for Stablevoy: create USDT and USDC invoices and check payments from Claude, Cursor or any MCP client. Non-custodial: the keys cannot move funds.",
   "keywords": [
