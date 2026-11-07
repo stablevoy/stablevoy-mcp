@@ -7,6 +7,7 @@ describe('configuration from the environment', () => {
   it('defaults to production, the default profile and writing tools', () => {
     expect(configFrom({})).toEqual({
       apiUrl: 'https://api.stablevoy.com',
+      siteUrl: 'https://stablevoy.com',
       connectUrl: 'https://stablevoy.com/app/connect-app/',
       loginDoneUrl: 'https://stablevoy.com/app/connect-app/done/',
       readOnly: false,
@@ -16,8 +17,8 @@ describe('configuration from the environment', () => {
   });
 
   it('takes a store key, a profile, read-only mode and local addresses for testing', () => {
-    const config = configFrom({ STABLEVOY_API_KEY: 'sk_test_abc', STABLEVOY_MCP_PROFILE: 'work', STABLEVOY_MCP_READ_ONLY: 'true', STABLEVOY_API_URL: 'http://localhost:8080/', STABLEVOY_CONNECT_URL: 'http://127.0.0.1:3000/app/connect-app/' });
-    expect(config).toMatchObject({ apiUrl: 'http://localhost:8080', connectUrl: 'http://127.0.0.1:3000/app/connect-app/', readOnly: true, source: { kind: 'key', apiKey: 'sk_test_abc' }, profile: 'work' });
+    const config = configFrom({ STABLEVOY_API_KEY: 'sk_test_abc', STABLEVOY_MCP_PROFILE: 'work', STABLEVOY_MCP_READ_ONLY: 'true', STABLEVOY_API_URL: 'http://localhost:8080/', STABLEVOY_CONNECT_URL: 'http://127.0.0.1:3000/app/connect-app/', STABLEVOY_SITE_URL: 'http://localhost:3000/' });
+    expect(config).toMatchObject({ apiUrl: 'http://localhost:8080', siteUrl: 'http://localhost:3000', connectUrl: 'http://127.0.0.1:3000/app/connect-app/', readOnly: true, source: { kind: 'key', apiKey: 'sk_test_abc' }, profile: 'work' });
     expect(configFrom({ STABLEVOY_MCP_READ_ONLY: 'false', STABLEVOY_API_KEY: '' }).readOnly).toBe(false);
     // The result page sits under the connect page, with or without its trailing slash or a query.
     expect(config.loginDoneUrl).toBe('http://127.0.0.1:3000/app/connect-app/done/');
@@ -29,6 +30,7 @@ describe('configuration from the environment', () => {
     expect(() => configFrom({ STABLEVOY_MCP_READ_ONLY: 'yes' })).toThrow('STABLEVOY_MCP_READ_ONLY must be true or false');
     expect(() => configFrom({ STABLEVOY_API_URL: 'http://api.stablevoy.com' })).toThrow('STABLEVOY_API_URL must use https');
     expect(() => configFrom({ STABLEVOY_API_URL: 'not a url' })).toThrow('STABLEVOY_API_URL is not a valid URL');
+    expect(() => configFrom({ STABLEVOY_SITE_URL: 'http://stablevoy.com' })).toThrow('STABLEVOY_SITE_URL must use https');
     expect(() => configFrom({ STABLEVOY_MCP_PROFILE: '../etc' })).toThrow('Profile "../etc" must be');
     expect(profileName(undefined)).toBe('default');
   });

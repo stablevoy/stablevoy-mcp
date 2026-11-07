@@ -8,6 +8,8 @@ import { configFrom } from './config/Config.js';
 import { McpConfigError } from './config/McpConfigError.js';
 import { configDir } from './credentials/ConfigDir.js';
 import { CredentialStore } from './credentials/CredentialStore.js';
+import { DocsFetcher } from './docs/DocsFetcher.js';
+import { DocsLibrary } from './docs/DocsLibrary.js';
 import { systemBrowserOpener } from './login/BrowserOpener.js';
 import { sdkKeyRevoker } from './login/KeyRevoker.js';
 import { LOGIN_TIMEOUT_MS, LoginCommand } from './login/LoginCommand.js';
@@ -40,6 +42,7 @@ try {
     }),
     logout: new LogoutCommand({ credentials, revoke, out }),
     stores: new StoresCommand({ credentials, revoke, out }),
+    docs: new DocsLibrary({ fetcher: new DocsFetcher({ fetch: globalThis.fetch, now: Date.now }), siteUrl: config.siteUrl, apiUrl: config.apiUrl }),
     sdkFor: (apiKey) => Stablevoy.create({ apiKey, baseUrl: config.apiUrl, userAgentSuffix }),
     serve: (server) => server.connect(new StdioServerTransport()),
     out,

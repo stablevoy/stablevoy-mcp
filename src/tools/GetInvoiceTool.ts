@@ -14,7 +14,7 @@ export class GetInvoiceTool implements Tool {
   readonly name = 'get_invoice';
   readonly title = 'Read an invoice';
   readonly description =
-    "Gets one invoice by its id when you already have the id, for example from create_invoice or list_invoices. Returns id, status, amountUsd, reference, createdAt, expiresAt, paidAt, holdReason, networks and payments (network, token, amount in the token's smallest units, txHash, status, detectedAt). Without store it looks in every connected store; an id no store has gives a not_found error. To find invoices by status, reference or date, use list_invoices. Uses the store's API key; a failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.";
+    'Gets one invoice by its id: status, amountUsd, reference, dates (createdAt, expiresAt, paidAt), holdReason, networks and the payments received. The id comes from create_invoice, list_invoices or the merchant. Without store every connected store is asked; an id no store has gives not_found. To find invoices by status, reference or date, use list_invoices. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { invoiceId: z.uuid().describe('The invoice id.'), store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 

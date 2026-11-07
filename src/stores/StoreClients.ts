@@ -6,8 +6,20 @@ import type { StoreClient } from './StoreClient.js';
  * a call without it, or with a name or id that matches none or several, is an error that lists the stores.
  */
 export class StoreClients {
+  private readonly first: StoreClient;
+  private readonly others: readonly StoreClient[];
+
   constructor(readonly all: readonly StoreClient[]) {
-    if (all.length === 0) throw new Error('StoreClients needs at least one store key');
+    const [first, ...others] = all;
+    if (first === undefined) throw new Error('StoreClients needs at least one store key');
+    this.first = first;
+    this.others = others;
+  }
+
+  /** The store named by `store`, or every store when it is left out and several are connected; never empty. */
+  async targets(store: string | undefined): Promise<readonly [StoreClient, ...StoreClient[]]> {
+    if (store === undefined && this.several) return [this.first, ...this.others];
+    return [await this.resolve(store)];
   }
 
   get several(): boolean {

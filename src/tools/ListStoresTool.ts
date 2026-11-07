@@ -10,7 +10,7 @@ export class ListStoresTool implements Tool {
   readonly name = 'list_stores';
   readonly title = 'List connected stores';
   readonly description =
-    'Lists the Stablevoy stores this server can work with. Returns stores: one entry per connected store with id, name, status, enabledNetworks, canAcceptPayments and evmPayoutStatus, or an error for a store whose key no longer works. Call it first to learn store names for the store argument of the other tools; use get_store for the full settings of one store. Uses the store\'s API key; a failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Lists every Stablevoy store this server has a key for, all at once with no paging (usually one to a few). Each entry has id, name, status, enabledNetworks, canAcceptPayments and evmPayoutStatus; a store whose key no longer works shows its error instead. Call it first to learn the names for the store argument of the other tools. For the full settings of one store use get_store. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = {};
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 

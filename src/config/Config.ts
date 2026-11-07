@@ -9,6 +9,8 @@ export type KeySource = { readonly kind: 'key'; readonly apiKey: string } | { re
 /** Everything the server and the CLI read from the environment, once, at start (spec SPEC-mcp-server 3.2). */
 export interface Config {
   readonly apiUrl: string;
+  /** The site whose llms.txt and Markdown pages the docs tools read. */
+  readonly siteUrl: string;
   /** The dashboard page npx stablevoy-mcp login opens. */
   readonly connectUrl: string;
   /** The page of the site the browser lands on when the login has finished: done/ under connectUrl. */
@@ -31,6 +33,7 @@ export function configFrom(env: Readonly<Record<string, string | undefined>>): C
   if (!connectPage.pathname.endsWith('/')) connectPage.pathname += '/';
   return {
     apiUrl: serviceUrl('STABLEVOY_API_URL', env['STABLEVOY_API_URL'], 'https://api.stablevoy.com', true),
+    siteUrl: serviceUrl('STABLEVOY_SITE_URL', env['STABLEVOY_SITE_URL'], 'https://stablevoy.com', true),
     connectUrl,
     loginDoneUrl: new URL('done/', connectPage).toString(),
     readOnly: readOnly === 'true',

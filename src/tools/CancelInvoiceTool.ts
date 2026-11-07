@@ -18,7 +18,7 @@ export class CancelInvoiceTool implements Tool {
   readonly name = 'cancel_invoice';
   readonly title = 'Cancel an unpaid invoice';
   readonly description =
-    'Cancels an unpaid invoice so the buyer can no longer pay it. Works only while no payment has been seen; otherwise it returns invoice_not_cancellable and the invoice stays as it is. A payment that still arrives later is marked paid_late. Cancelling an already cancelled invoice returns it unchanged. Use get_invoice first if you are not sure of its status. Uses the store\'s API key; a failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Cancels an unpaid invoice so the buyer can no longer pay it, for example when the order was called off. Pass the invoiceId from create_invoice, list_invoices or get_invoice. Without store every connected store is tried and only the one that owns the invoice cancels it. It works only while no payment has been seen; otherwise it returns invoice_not_cancellable and the invoice stays as it is. Money that still arrives later is marked paid_late, and cancelling twice returns the invoice unchanged. Use get_invoice first if you are not sure of its status. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { invoiceId: z.uuid().describe('The invoice id.'), store: storeArgument };
   readonly annotations = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true };
 

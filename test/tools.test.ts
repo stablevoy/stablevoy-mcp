@@ -4,11 +4,12 @@ import { createServer, SERVER_INSTRUCTIONS } from '../src/server/ServerFactory.j
 import { toolsFor } from '../src/server/toolsFor.js';
 import { StoreClient } from '../src/stores/StoreClient.js';
 import { StoreClients } from '../src/stores/StoreClients.js';
-import { centsOf, usdOf } from '../src/tools/AmountUsd.js';
+import { centsOf, usdOf, usdOfMicros } from '../src/tools/AmountUsd.js';
 import { idempotencyKeyOf } from '../src/tools/IdempotencyKey.js';
 import { errorText } from '../src/tools/ToolError.js';
 import { fakeStablevoy, problem, type Routes } from './support/FakeApi.js';
 import { connectClient, textOf } from './support/McpHarness.js';
+import { fakeDocs } from './support/FakeSite.js';
 import { example } from './support/openApi.js';
 
 const INVOICE = '7c3360b5-e8cc-4775-8a13-7324d4f1296e';
@@ -25,7 +26,7 @@ function storeRoutes(name: string, id: string, extra: Routes = {}): Routes {
 async function serverWith(stores: { routes: Routes; known?: { id: string; name: string } }[], readOnly = false) {
   const fakes = stores.map((s) => fakeStablevoy(s.routes));
   const clients = new StoreClients(fakes.map((f, i) => new StoreClient(f.api, stores[i]?.known ?? null)));
-  const { client, call } = await connectClient(createServer('stablevoy-mcp', '0.1.0', toolsFor(clients, readOnly)));
+  const { client, call } = await connectClient(createServer('stablevoy-mcp', '0.1.0', toolsFor(clients, readOnly, fakeDocs().docs), true));
   return { client, call, fakes };
 }
 
@@ -49,7 +50,7 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     const { client } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
     const { tools } = await client.listTools();
     const writes = ['cancel_invoice', 'create_invoice'];
-    expect(tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_invoice', 'get_store', 'list_invoices', 'list_stores']);
+    expect(tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_doc', 'get_invoice', 'get_store', 'list_invoices', 'list_stores', 'list_unmatched_transfers', 'search_docs', 'summarize_payments']);
     expect(tools.find((t) => t.name === 'create_invoice')?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
     expect(tools.find((t) => t.name === 'cancel_invoice')?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
     expect(tools.filter((t) => !writes.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
@@ -62,9 +63,20 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
   it('describes every tool with a verb first and the sibling to use instead (spec SPEC-mcp-tool-descriptions)', async () => {
     const { client } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
     const described = Object.fromEntries((await client.listTools()).tools.map((t) => [t.name, t.description ?? '']));
-    const sibling: Record<string, string> = { list_stores: 'get_store', get_store: 'list_stores', get_invoice: 'list_invoices', list_invoices: 'get_invoice', create_invoice: 'get_invoice', cancel_invoice: 'get_invoice' };
+    const sibling: Record<string, string> = {
+      list_stores: 'get_store',
+      get_store: 'list_stores',
+      get_invoice: 'list_invoices',
+      list_invoices: 'get_invoice',
+      create_invoice: 'get_invoice',
+      cancel_invoice: 'get_invoice',
+      summarize_payments: 'list_invoices',
+      list_unmatched_transfers: 'get_invoice',
+      search_docs: 'get_doc',
+      get_doc: 'search_docs',
+    };
     for (const [name, other] of Object.entries(sibling)) {
-      expect(described[name], name).toMatch(/^(Lists|Gets|Creates|Cancels) /);
+      expect(described[name], name).toMatch(/^(Lists|Gets|Creates|Cancels|Sums|Searches) /);
       expect(described[name], name).toContain(other);
     }
   });
@@ -199,7 +211,7 @@ describe('more answers', () => {
     const one = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/invoices': () => ({ status: 200, body: { items: [(page['items'] as unknown[])[0]], nextCursor: null } }) }) }]);
     expect(textOf(await one.call('list_invoices'))).toBe(`1 invoice.\n${textOf(await one.call('list_invoices')).split('\n').slice(1).join('\n')}`);
     const failing = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/invoices': () => ({ status: 400, body: problem(400, 'invalid_invoice_filter', 'Bad filter') }) }) }]);
-    expect(textOf(await failing.call('list_invoices', { status: 'nope' }))).toBe('invalid_invoice_filter: Bad filter');
+    expect(textOf(await failing.call('list_invoices', { status: 'nope' }))).toBe('invalid_invoice_filter: Bad filter Check the filters: status and source from the tool description, days as YYYY-MM-DD with createdFrom not after createdTo. summarize_payments covers at most 92 days per call; split a year into four quarters.');
   });
 });
 
@@ -226,5 +238,86 @@ describe('store clients', () => {
     expect(await client.identity()).toEqual({ id: 's1', name: 'Main' });
     expect(fake.sent.filter((s) => s.key === 'GET /v1/store')).toHaveLength(1);
     expect(() => new StoreClients([])).toThrow('at least one store key');
+  });
+});
+
+describe('payment summary and unmatched transfers (spec SPEC-mcp-docs-summary-unmatched 3.3, 3.4)', () => {
+  const summary = (base: string, tron: string) => ({
+    ...example('GET', '/v1/invoices/summary', 200),
+    invoicedUsdCents: 48500,
+    receivedUsdMicros: String(BigInt(base) + BigInt(tron)),
+    byNetwork: [
+      { network: 'base', token: 'USDC', payments: 2, receivedUsdMicros: base },
+      { network: 'tron', token: 'USDT', payments: 1, receivedUsdMicros: tron },
+    ],
+  });
+
+  it('sums up one store in dollars, asking the API for the period or the days', async () => {
+    const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/invoices/summary': () => ({ status: 200, body: summary('251200000', '98500137') }) }) }]);
+    const week = await call('summarize_payments', { period: 'last_7_days' });
+    expect(textOf(week)).toMatch(/^12 invoices from 2026-11-01 to 2026-11-07, 349\.700137 USD received\./);
+    expect(week.structuredContent).toMatchObject({ store: 'Main', invoicedUsd: '485.00', receivedUsd: '349.700137', byNetwork: [{ network: 'base', token: 'USDC', payments: 2, receivedUsd: '251.20' }, { network: 'tron', receivedUsd: '98.500137' }] });
+    await call('summarize_payments', { createdFrom: '2026-10-01', createdTo: '2026-10-31' });
+    expect(fakes[0]?.sent.filter((s) => s.key === 'GET /v1/invoices/summary').map((s) => s.url.search)).toEqual(['?period=last_7_days', '?createdFrom=2026-10-01&createdTo=2026-10-31']);
+  });
+
+  it('gives each store and the total when several are connected', async () => {
+    const { call } = await serverWith([
+      { routes: storeRoutes('Main', 's1', { 'GET /v1/invoices/summary': () => ({ status: 200, body: summary('1000000', '0') }) }), known: { id: 's1', name: 'Main' } },
+      { routes: storeRoutes('Second', 's2', { 'GET /v1/invoices/summary': () => ({ status: 200, body: summary('2000000', '500000') }) }), known: { id: 's2', name: 'Second' } },
+    ]);
+    const result = (await call('summarize_payments', { period: 'this_month' })).structuredContent as { stores: { store: string }[]; total: Record<string, unknown> };
+    expect(result.stores.map((s) => s.store)).toEqual(['Main', 'Second']);
+    expect(result.total).toMatchObject({ invoices: { count: 24, byStatus: { paid: 16 } }, invoicedUsd: '970.00', receivedUsd: '3.50', byNetwork: [{ network: 'base', payments: 4, receivedUsd: '3.00' }, { network: 'tron', payments: 2, receivedUsd: '0.50' }] });
+  });
+
+  it.each([{}, { period: 'last_7_days', createdFrom: '2026-10-01' }, { createdFrom: '2026-10-01' }, { createdTo: '2026-10-31' }])('refuses %j before calling the API', async (args) => {
+    const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
+    const refused = await call('summarize_payments', args);
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toBe('Pass either period or both createdFrom and createdTo.');
+    expect(fakes[0]?.sent).toEqual([]);
+  });
+
+  it('passes the refusal of a long range with what to do', async () => {
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/invoices/summary': () => ({ status: 400, body: problem(400, 'invalid_invoice_filter', 'At most 92 days.') }) }) }]);
+    expect(textOf(await call('summarize_payments', { createdFrom: '2026-01-01', createdTo: '2026-12-31' }))).toMatch(/^invalid_invoice_filter: At most 92 days\. Check the filters: .* split a year into four quarters\.$/);
+  });
+
+  it('lists each unmatched transfer once with the stores it was seen for, dollars and the explorer link', async () => {
+    const [transfer] = example('GET', '/v1/unmatched-transfers', 200) as unknown as Record<string, unknown>[];
+    const older = { ...transfer, id: '00000000-0000-4000-8000-000000000001', network: 'base', txHash: '0xcd', detectedAt: '2026-10-01T00:00:00.000Z', sharedWithStores: 2 };
+    const routes = (list: unknown[]) => ({ 'GET /v1/unmatched-transfers': () => ({ status: 200, body: list }) });
+    const { call } = await serverWith([
+      { routes: storeRoutes('Main', 's1', routes([older, { ...transfer, sharedWithStores: 2 }])), known: { id: 's1', name: 'Main' } },
+      { routes: storeRoutes('Second', 's2', routes([{ ...transfer, sharedWithStores: 2 }])), known: { id: 's2', name: 'Second' } },
+    ]);
+    const result = await call('list_unmatched_transfers');
+    expect(textOf(result)).toMatch(/^2 unmatched transfers; the merchant attaches them to invoices in the dashboard\./);
+    const { transfers } = result.structuredContent as { transfers: Record<string, unknown>[] };
+    expect(transfers.map((t) => t['stores'])).toEqual([['Main', 'Second'], ['Main']]);
+    expect(transfers[0]).toMatchObject({ amountUsd: '98.500137', token: 'USDT', network: 'tron', sharedWithStores: 2, explorerUrl: `${String(transfer?.['explorerTxUrl'])}${'ab'.repeat(32)}` });
+    expect(transfers[1]).toMatchObject({ explorerUrl: `${String(transfer?.['explorerTxUrl'])}0xcd` });
+    const none = await serverWith([{ routes: storeRoutes('Main', 's1', routes([])) }]);
+    expect(textOf(await none.call('list_unmatched_transfers'))).toMatch(/^No unmatched transfers\./);
+    const failing = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/unmatched-transfers': () => ({ status: 429, body: problem(429, 'rate_limited', 'Slow down.') }) }) }]);
+    expect(textOf(await failing.call('list_unmatched_transfers', { store: 'Main' }))).toMatch(/^rate_limited: Slow down\./);
+    expect(textOf(await failing.call('list_unmatched_transfers'))).toMatch(/^rate_limited: Slow down\. Retry after \d+ seconds\.$/);
+  });
+
+  it('turns millionths of a dollar into exact dollars', () => {
+    expect([usdOfMicros('0'), usdOfMicros('5'), usdOfMicros('1000000'), usdOfMicros(123_456_789n)]).toEqual(['0.00', '0.000005', '1.00', '123.456789']);
+  });
+});
+
+describe('with a store key', () => {
+  it('offers the docs tools without the sign-in notice, and says one section, one invoice and one transfer in the singular', async () => {
+    const [transfer] = example('GET', '/v1/unmatched-transfers', 200) as unknown as Record<string, unknown>[];
+    const one = { ...example('GET', '/v1/invoices/summary', 200), invoices: { count: 1, byStatus: { paid: 1 } } };
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/invoices/summary': () => ({ status: 200, body: one }), 'GET /v1/unmatched-transfers': () => ({ status: 200, body: [transfer] }) }) }]);
+    expect(textOf(await call('search_docs', { query: 'login connect page' }))).toMatch(/^1 section for "login connect page"\.\n/);
+    expect(textOf(await call('get_doc', { path: '/mcp.md' })).endsWith('/mcp/\n')).toBe(true);
+    expect(textOf(await call('summarize_payments', { period: 'last_month' }))).toMatch(/^1 invoice from /);
+    expect(textOf(await call('list_unmatched_transfers'))).toMatch(/^1 unmatched transfer;/);
   });
 });
