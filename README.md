@@ -2,6 +2,7 @@
 
 [![stablevoy-mcp MCP server - quality and maintenance score on Glama](https://glama.ai/mcp/servers/stablevoy/stablevoy-mcp/badges/score.svg)](https://glama.ai/mcp/servers/stablevoy/stablevoy-mcp)
 [![Stablevoy MCP server](https://mcprush.com/badge/stablevoy-mcp/card.svg)](https://mcprush.com/to/stablevoy-mcp?ref=badge)
+[![MCP Badge](https://lobehub.com/badge/mcp/stablevoy-stablevoy-mcp)](https://lobehub.com/mcp/stablevoy-stablevoy-mcp)
 
 An MCP server for [Stablevoy](https://stablevoy.com), the non-custodial USDT and USDC payment gateway. Ask your AI assistant to bill a client, check whether an invoice is paid or sum up the week, across all your stores:
 
