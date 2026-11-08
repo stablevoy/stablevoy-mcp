@@ -1,8 +1,8 @@
 {
   "name": "stablevoy-mcp",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "mcpName": "io.github.stablevoy/stablevoy-mcp",
-  "description": "MCP server for Stablevoy: create and cancel USDT and USDC invoices, sum up payments, review unmatched transfers and search the docs from Claude, Cursor or any MCP client. Prompts for common tasks, docs as resources. Non-custodial: the keys cannot move funds.",
+  "description": "MCP server for Stablevoy: create and cancel USDT and USDC invoices, sum up payments, review unmatched transfers and search the docs from Claude, Cursor or any MCP client, with ready prompts. Non-custodial: keys cannot move funds.",
   "keywords": [
     "mcp",
     "model context protocol",

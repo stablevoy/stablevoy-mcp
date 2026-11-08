@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- The package description fits the 255 characters npm keeps; 0.4.0 showed it cut off in search results. No change to the server.
+
 ## 0.4.0
 
 - Prompts: payments_summary, unpaid_invoices, client_payments, review_unmatched_transfers and getting_started. Each one tells the assistant which tools to call and what to report; none of them changes anything. Arguments outside the allowed values are refused with the allowed values.
