@@ -2,7 +2,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { SummaryPeriod, type InvoiceSummary, type InvoiceSummaryInput, type SummaryPeriodName } from 'stablevoy';
 import { z } from 'zod';
 import type { StoreClient } from '../stores/StoreClient.js';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { usdOf, usdOfMicros } from './AmountUsd.js';
 import { storeArgument } from './StoreArgument.js';
 import type { Tool } from './Tool.js';
@@ -32,7 +32,7 @@ export class SummarizePaymentsTool implements Tool {
   readonly name = 'summarize_payments';
   readonly title = 'Sum up invoices and payments for a period';
   readonly description =
-    'Sums up the invoices created in a period instead of paging through list_invoices: how many in each status, invoicedUsd (cancelled and expired left out), receivedUsd (confirmed payments that passed sanctions screening) and the money per network and token. Pass period (last_7_days, last_30_days, this_month, last_month or last_3_months) or both createdFrom and createdTo as UTC days; one call covers at most 92 days, so ask for a year in four quarters. Without store and with several stores you get one summary per store plus a total. Use list_invoices to see the invoices themselves. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Sums up the invoices created in a period, instead of paging through list_invoices. Needs a store key (npx stablevoy-mcp login). It returns how many invoices are in each status, invoicedUsd (cancelled and expired left out), receivedUsd (confirmed payments that passed sanctions screening) and the money per network and token. Pass either period or both createdFrom and createdTo as UTC days. A period together with dates, or only one of the two dates, is refused. One call covers at most 92 days; ask for a year in four quarters. Without store and with several stores you get one summary per store plus a total. Use list_invoices to see the invoices themselves. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = {
     period: z.enum(PERIODS).optional().describe('A ready-made range of UTC days ending today. Leave out when giving dates.'),
     createdFrom: z.string().regex(DAY).optional().describe('First UTC day, YYYY-MM-DD, with createdTo.'),
@@ -41,7 +41,7 @@ export class SummarizePaymentsTool implements Tool {
   };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(args: SummaryArgs): Promise<CallToolResult> {
     const input = SummarizePaymentsTool.inputOf(args);

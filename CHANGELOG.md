@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Prompts: payments_summary, unpaid_invoices, client_payments, review_unmatched_transfers and getting_started. Each one tells the assistant which tools to call and what to report; none of them changes anything. Arguments outside the allowed values are refused with the allowed values.
+- Resources: every documentation page listed in llms.txt as stablevoy://docs/<page>, plus stablevoy://docs/openapi and stablevoy://docs/errors. No key needed; the same cache, timeout and 1 MB limit as the documentation tools.
+- Without a login and without STABLEVOY_API_KEY the server now lists every tool, prompt and resource. The store tools answer not_signed_in with what to do, without calling the API. Before, only the documentation tools were listed.
+- Every tool description says right after its first sentence whether it needs a store key. Clearer descriptions of get_doc (a page over 1 MB is refused, nothing is cut), list_unmatched_transfers (at most the 100 newest, no paging past them) and summarize_payments (a period with dates, or only one date, is refused).
+- README: prompts, resources, and where to ask questions (GitHub Discussions).
+
 ## 0.3.0
 
 - New tool summarize_payments: totals of the invoices created in a period (last_7_days, last_30_days, this_month, last_month, last_3_months, or createdFrom and createdTo, at most 92 days per call): count per status, invoicedUsd, receivedUsd and the money per network and token. Without store and with several stores, each store and the total.

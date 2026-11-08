@@ -9,6 +9,8 @@ import type { LogoutCommand } from '../login/LogoutCommand.js';
 import type { Output } from '../login/Output.js';
 import type { StoresCommand } from '../login/StoresCommand.js';
 import { createServer } from '../server/ServerFactory.js';
+import { promptsFor } from '../prompts/promptsFor.js';
+import type { DocsResources } from '../resources/DocsResources.js';
 import { toolsFor } from '../server/toolsFor.js';
 import { StoreClient } from '../stores/StoreClient.js';
 import { StoreClients } from '../stores/StoreClients.js';
@@ -27,6 +29,8 @@ export interface CliDeps {
   readonly stores: StoresCommand;
   /** The documentation the docs tools read; they work without a key. */
   readonly docs: DocsLibrary;
+  /** The same documentation as MCP resources. */
+  readonly docsResources: DocsResources;
   /** An SDK client for one store key. */
   readonly sdkFor: (apiKey: string) => Stablevoy;
   /** Connects the server to its transport (stdio in production) and resolves when it is running. */
@@ -56,7 +60,9 @@ export class Cli {
           return await this.deps.stores.remove(profile(command.profile), command.store);
         case 'serve': {
           const stores = await this.storeClients();
-          await this.deps.serve(createServer(SERVER_NAME, this.deps.version, toolsFor(stores, this.deps.config.readOnly, this.deps.docs), stores !== null));
+          const signedIn = stores !== null;
+          const parts = { tools: toolsFor(stores, this.deps.config.readOnly, this.deps.docs), prompts: promptsFor(signedIn), docs: this.deps.docsResources };
+          await this.deps.serve(createServer(SERVER_NAME, this.deps.version, parts, signedIn));
           return 0;
         }
       }
@@ -68,15 +74,16 @@ export class Cli {
   }
 
   /**
-   * The store keys, or null when there is no login and no STABLEVOY_API_KEY: the server then offers the docs tools only
-   * and says so in its instructions (spec SPEC-mcp-docs-summary-unmatched 3.2). A broken key file still fails loudly.
+   * The store keys, or null when there is no login and no STABLEVOY_API_KEY: the server then lists every tool, the store
+   * tools answering not_signed_in, and says so in its instructions (spec SPEC-mcp-prompts-resources 2). A broken key
+   * file still fails loudly.
    */
   private async storeClients(): Promise<StoreClients | null> {
     const { source } = this.deps.config;
     if (source.kind === 'key') return new StoreClients([new StoreClient(this.deps.sdkFor(source.apiKey), null)]);
     const saved = await this.deps.credentials.read(source.profile);
     if (saved === null) {
-      this.deps.out(`No Stablevoy key: serving the documentation tools only. Run npx stablevoy-mcp login, or set STABLEVOY_API_KEY in the MCP client config.`);
+      this.deps.out(`No Stablevoy key: the store tools answer not_signed_in, the documentation works. Run npx stablevoy-mcp login, or set STABLEVOY_API_KEY in the MCP client config.`);
       return null;
     }
     return new StoreClients(saved.keys.map((key) => new StoreClient(this.deps.sdkFor(key.apiKey), { id: key.storeId, name: key.storeName })));

@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { UnmatchedTransfer } from 'stablevoy';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { usdOfMicros } from './AmountUsd.js';
 import { storeArgument } from './StoreArgument.js';
 import type { Tool } from './Tool.js';
@@ -12,11 +12,11 @@ export class ListUnmatchedTransfersTool implements Tool {
   readonly name = 'list_unmatched_transfers';
   readonly title = 'List unmatched transfers';
   readonly description =
-    'Lists payments that reached the merchant\'s own Tron wallet but matched no invoice, usually because an exchange took its fee out of the amount, newest first, at most 100. Each has amountUsd, network, token, fromAddress, txHash, explorerUrl, detectedAt, the stores it was listed for and sharedWithStores: the payout wallet belongs to the account, so 1 means the transfer is certainly that store\'s and more means it may belong to any of that many stores. You cannot attach a transfer to an invoice: tell the merchant to do it in the Stablevoy dashboard, Unmatched transfers section. Use get_invoice or list_invoices to find the invoice the buyer meant. Without store and with several stores, every store is asked and each transfer is listed once. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Lists payments that reached the merchant\'s own Tron wallet but matched no invoice, newest first. Needs a store key (npx stablevoy-mcp login). This usually happens when an exchange took its fee out of the amount. At most the 100 newest are returned; there is no paging past them. Each transfer has amountUsd, network, token, fromAddress, txHash, explorerUrl, detectedAt and the stores it was listed for. sharedWithStores tells whose it is: the payout wallet belongs to the account, so 1 means the transfer is certainly that store\'s and more means it may belong to any of that many stores. You cannot attach a transfer to an invoice: tell the merchant to do it in the Stablevoy dashboard, Unmatched transfers section. Use get_invoice or list_invoices to find the invoice the buyer meant. Without store and with several stores, every store is asked and each transfer is listed once. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(args: { store?: string }): Promise<CallToolResult> {
     try {

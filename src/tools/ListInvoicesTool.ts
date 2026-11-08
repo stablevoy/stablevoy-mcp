@@ -1,7 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { StoreClient } from '../stores/StoreClient.js';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { invoiceView } from './InvoiceView.js';
 import { storeArgument } from './StoreArgument.js';
 import type { Tool } from './Tool.js';
@@ -26,7 +26,7 @@ export class ListInvoicesTool implements Tool {
   readonly name = 'list_invoices';
   readonly title = 'List invoices';
   readonly description =
-    'Lists invoices newest first, to find invoices when you have no id. All filters are optional and combine: status, source, search (an invoice id or the start of the reference), createdFrom and createdTo (UTC days, both included) and limit (1 to 100, 20 by default). Each call returns one page per store: its name, invoices with the fields of get_invoice, and nextCursor. For the next page pass nextCursor as cursor with the same store. No match is an empty list. For one invoice by id use get_invoice; for totals of a period use summarize_payments. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Lists invoices newest first, to find invoices when you have no id. Needs a store key (npx stablevoy-mcp login). All filters are optional and combine: status, source, search (an invoice id or the start of the reference), createdFrom and createdTo (UTC days, both included) and limit (1 to 100, 20 by default). Each call returns one page per store: its name, invoices with the fields of get_invoice, and nextCursor. For the next page pass nextCursor as cursor with the same store. No match is an empty list. For one invoice by id use get_invoice; for totals of a period use summarize_payments. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = {
     status: z.string().min(1).max(40).optional().describe('awaiting_payment, confirming, paid, overpaid, underpaid, paid_late, expired, on_hold or cancelled.'),
     source: z.string().min(1).max(40).optional().describe('How the invoice was made: payment_link, woocommerce, edd, whmcs, api_key or not_recorded.'),
@@ -39,7 +39,7 @@ export class ListInvoicesTool implements Tool {
   };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(args: ListArgs): Promise<CallToolResult> {
     try {

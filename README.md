@@ -61,7 +61,7 @@ Create a key on the store page of the dashboard and pass it instead:
 
 ### Without a key
 
-With no login and no `STABLEVOY_API_KEY` the server still starts, with the documentation tools only (search_docs and get_doc), and tells the assistant it is not signed in. The assistant can then explain how to connect and create a store; run `npx stablevoy-mcp login` to work with invoices.
+With no login and no `STABLEVOY_API_KEY` the server still starts and lists every tool, prompt and resource, and tells the assistant it is not signed in. The store tools then answer `not_signed_in` with what to do, without calling the API; the documentation tools, the docs resources and the getting_started prompt work. Run `npx stablevoy-mcp login` to work with invoices.
 
 ### Read-only
 
@@ -92,6 +92,24 @@ Adding a store always goes through the browser, since it needs your wallet. The 
 
 With several stores, tools take a `store` argument (the id or the exact name from list_stores); the server asks for it rather than guessing.
 
+Every tool description says whether it needs a store key.
+
+## Prompts
+
+Ready-made tasks your MCP client can offer in its prompt or slash-command menu. Each one tells the assistant which tools to call and what to report; none of them changes anything.
+
+| Prompt | Arguments | What you get |
+| --- | --- | --- |
+| payments_summary | period, store (optional) | Paid and unpaid invoices of the period per store and in total, the money per network and token, and the change against the period before. |
+| unpaid_invoices | store (optional) | Invoices still waiting for payment, the ones expiring within 24 hours first, with the payment link to send the buyer again. |
+| client_payments | reference, store (optional) | Every invoice of one order or client by its reference, with what was paid and the transactions. |
+| review_unmatched_transfers | store (optional) | For each transfer that matched no invoice, the invoice it most likely belongs to, as a suggestion you then assign in the dashboard. |
+| getting_started | none | How to start taking USDT and USDC, from the documentation, and how to connect this server. Needs no key. |
+
+## Resources
+
+The public Stablevoy documentation as read-only resources, no key needed: every page listed in [llms.txt](https://stablevoy.com/llms.txt) as `stablevoy://docs/<page>` (for example `stablevoy://docs/webhooks`), plus `stablevoy://docs/openapi` (every API endpoint) and `stablevoy://docs/errors` (every error code with what to do). Nothing is read until a resource is asked for; if the site cannot be read, the client gets the reason, never an empty list.
+
 ## Configuration
 
 | Variable | Meaning |
@@ -102,7 +120,11 @@ With several stores, tools take a `store` argument (the id or the exact name fro
 | STABLEVOY_API_URL | The API, `https://api.stablevoy.com` by default. |
 | STABLEVOY_SITE_URL | The site the documentation tools read, `https://stablevoy.com` by default. |
 
-The documentation tools keep each page in memory for an hour, wait at most 10 seconds for an answer and read at most 1 MB per page.
+The documentation tools and resources keep each page in memory for an hour, wait at most 10 seconds for an answer and read at most 1 MB per page.
+
+## Questions and bugs
+
+Ask questions in [GitHub Discussions](https://github.com/orgs/stablevoy/discussions/categories/mcp-server), category MCP server. Open an issue in this repository for a bug, with the version and the smallest example that shows it. Never paste a key, not even a test one.
 
 ## License
 

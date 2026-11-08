@@ -10,7 +10,7 @@ import { toolResult } from './ToolResult.js';
 export class SearchDocsTool implements Tool {
   readonly name = 'search_docs';
   readonly title = 'Search the Stablevoy documentation';
-  readonly description = `Searches the Stablevoy documentation and returns up to ${MAX_HITS} matching sections, each with the page title, its path for get_doc, the page address, the heading and the text. Use it for how-to questions: connecting a shop, creating a store, webhooks and their signatures, networks and fees, the payment widget, the plugins, recovery. Ask with a few plain words, for example "webhook signature" or "Tron fee". An empty list means no section matched; try other words. Call get_doc with a path to read the whole page. Needs no API key. The pages are kept for an hour, so searching again costs nothing.`;
+  readonly description = `Searches the Stablevoy documentation and returns up to ${MAX_HITS} matching sections, each with the page title, its path for get_doc, the page address, the heading and the text. Needs no key. Use it for how-to questions: connecting a shop, creating a store, webhooks and their signatures, networks and fees, the payment widget, the plugins, recovery. Ask with a few plain words, for example "webhook signature" or "Tron fee". An empty list means no section matched; try other words. Call get_doc with a path to read the whole page. The pages are kept for an hour, so searching again costs nothing.`;
   readonly input = { query: z.string().min(2).max(200).describe('A few words to look for, for example "webhook retries".') };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 

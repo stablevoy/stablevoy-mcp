@@ -1,11 +1,12 @@
 import { StoreChoiceError } from './StoreChoiceError.js';
 import type { StoreClient } from './StoreClient.js';
+import type { StoreDirectory } from './StoreDirectory.js';
 
 /**
  * The stores this server has a key for (spec SPEC-mcp-server 3.3, 0). One store needs no `store` argument; with several
  * a call without it, or with a name or id that matches none or several, is an error that lists the stores.
  */
-export class StoreClients {
+export class StoreClients implements StoreDirectory {
   private readonly first: StoreClient;
   private readonly others: readonly StoreClient[];
 

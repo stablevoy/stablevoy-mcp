@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { centsOf } from './AmountUsd.js';
 import { idempotencyKeyOf } from './IdempotencyKey.js';
 import { invoiceView } from './InvoiceView.js';
@@ -14,7 +14,7 @@ export class CreateInvoiceTool implements Tool {
   readonly name = 'create_invoice';
   readonly title = 'Create an invoice';
   readonly description =
-    'Creates a Stablevoy invoice the buyer pays in USDT or USDC and returns its payment link, checkoutUrl. Send that link to the buyer yourself; Stablevoy does not email it. Give a reference (for example "acme-october") whenever you can: the same amount and reference return the same invoice instead of a second one. returnUrl is an https page the buyer goes back to after paying. expiresInMinutes, 15 to 10080, is how long the buyer has; left out, the store default applies. After expiresAt the payment page tells the buyer not to pay, and money that still arrives is marked paid_late. To change the amount of an unpaid invoice, cancel it with cancel_invoice first. Check the result later with get_invoice. Pass store when several stores are connected. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Creates a Stablevoy invoice the buyer pays in USDT or USDC and returns its payment link, checkoutUrl. Needs a store key (npx stablevoy-mcp login). Send that link to the buyer yourself; Stablevoy does not email it. Give a reference (for example "acme-october") whenever you can: the same amount and reference return the same invoice instead of a second one. returnUrl is an https page the buyer goes back to after paying. expiresInMinutes, 15 to 10080, is how long the buyer has; left out, the store default applies. After expiresAt the payment page tells the buyer not to pay, and money that still arrives is marked paid_late. To change the amount of an unpaid invoice, cancel it with cancel_invoice first. Check the result later with get_invoice. Pass store when several stores are connected. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = {
     amountUsd: z.string().describe('Amount in US dollars as a decimal string, for example "250" or "19.99".'),
     reference: z.string().min(1).max(200).optional().describe('Your reference for this invoice, sent back in webhooks, 1 to 200 characters.'),
@@ -30,7 +30,7 @@ export class CreateInvoiceTool implements Tool {
   };
   readonly annotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(args: { amountUsd: string; reference?: string; returnUrl?: string; expiresInMinutes?: number; store?: string }): Promise<CallToolResult> {
     const cents = centsOf(args.amountUsd);

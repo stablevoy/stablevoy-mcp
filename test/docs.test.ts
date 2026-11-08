@@ -10,7 +10,7 @@ import { createServer } from '../src/server/ServerFactory.js';
 import { toolsFor } from '../src/server/toolsFor.js';
 import { docsToolError } from '../src/tools/DocsToolError.js';
 import { API, defaultFiles, fakeDocs, LLMS_TXT, SITE, WEBHOOKS_MD } from './support/FakeSite.js';
-import { connectClient, textOf } from './support/McpHarness.js';
+import { connectClient, textOf, partsWith } from './support/McpHarness.js';
 
 describe('llms.txt and Markdown sections', () => {
   it('reads the listed pages with their section, and ignores other lines', () => {
@@ -143,7 +143,7 @@ describe('the docs library', () => {
 
 describe('the docs tools', () => {
   async function docsServer(files = defaultFiles()) {
-    return connectClient(createServer('stablevoy-mcp', '0.3.0', toolsFor(null, false, fakeDocs(files).docs), false));
+    return connectClient(createServer('stablevoy-mcp', '0.3.0', partsWith(toolsFor(null, false, fakeDocs(files).docs), false), false));
   }
 
   it('search the pages and read one, and say when nothing matched', async () => {

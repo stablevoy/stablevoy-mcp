@@ -8,7 +8,7 @@ import { centsOf, usdOf, usdOfMicros } from '../src/tools/AmountUsd.js';
 import { idempotencyKeyOf } from '../src/tools/IdempotencyKey.js';
 import { errorText } from '../src/tools/ToolError.js';
 import { fakeStablevoy, problem, type Routes } from './support/FakeApi.js';
-import { connectClient, textOf } from './support/McpHarness.js';
+import { connectClient, textOf, partsWith } from './support/McpHarness.js';
 import { fakeDocs } from './support/FakeSite.js';
 import { example } from './support/openApi.js';
 
@@ -26,7 +26,7 @@ function storeRoutes(name: string, id: string, extra: Routes = {}): Routes {
 async function serverWith(stores: { routes: Routes; known?: { id: string; name: string } }[], readOnly = false) {
   const fakes = stores.map((s) => fakeStablevoy(s.routes));
   const clients = new StoreClients(fakes.map((f, i) => new StoreClient(f.api, stores[i]?.known ?? null)));
-  const { client, call } = await connectClient(createServer('stablevoy-mcp', '0.1.0', toolsFor(clients, readOnly, fakeDocs().docs), true));
+  const { client, call } = await connectClient(createServer('stablevoy-mcp', '0.1.0', partsWith(toolsFor(clients, readOnly, fakeDocs().docs), true), true));
   return { client, call, fakes };
 }
 

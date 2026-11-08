@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { canAcceptPayments } from 'stablevoy';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import type { Tool } from './Tool.js';
 import { errorText } from './ToolError.js';
 import { toolResult } from './ToolResult.js';
@@ -10,11 +10,11 @@ export class ListStoresTool implements Tool {
   readonly name = 'list_stores';
   readonly title = 'List connected stores';
   readonly description =
-    'Lists every Stablevoy store this server has a key for, all at once with no paging (usually one to a few). Each entry has id, name, status, enabledNetworks, canAcceptPayments and evmPayoutStatus; a store whose key no longer works shows its error instead. Call it first to learn the names for the store argument of the other tools. For the full settings of one store use get_store. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Lists every Stablevoy store this server has a key for, all at once with no paging (usually one to a few). Needs a store key (npx stablevoy-mcp login). Each entry has id, name, status, enabledNetworks, canAcceptPayments and evmPayoutStatus; a store whose key no longer works shows its error instead. Call it first to learn the names for the store argument of the other tools. For the full settings of one store use get_store. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = {};
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(): Promise<CallToolResult> {
     const rows = await Promise.all(

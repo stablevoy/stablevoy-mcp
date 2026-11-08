@@ -8,7 +8,7 @@ import type { Tool } from './Tool.js';
 export class GetDocTool implements Tool {
   readonly name = 'get_doc';
   readonly title = 'Read a Stablevoy documentation page';
-  readonly description = `Gets one whole page of the Stablevoy documentation as Markdown. Pass a path from search_docs, for example "/docs/webhooks.md", or "${OPENAPI_DOC}" for every API endpoint with its parameters, or "${ERRORS_DOC}" for every error code with what to do. Only Stablevoy pages are read; any other address is refused with the list of pages. Use search_docs first when you do not know which page has the answer. Needs no API key.`;
+  readonly description = `Gets one whole page of the Stablevoy documentation as Markdown. Needs no key. Pass a path from search_docs; the OpenAPI outline lists every API endpoint with its parameters, the errors page every error code with what to do. Only Stablevoy pages are read: any other address is refused with the list of pages, and a page over 1 MB is refused rather than cut. Use search_docs first when you do not know which page has the answer.`;
   readonly input = { path: z.string().min(1).max(300).describe(`A docs path like "/docs/webhooks.md", or "${OPENAPI_DOC}", or "${ERRORS_DOC}".`) };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 

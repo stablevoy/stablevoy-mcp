@@ -1,5 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { ApiError, AuthenticationError, RateLimitedError, StablevoyError } from 'stablevoy';
+import { NotSignedInError } from '../stores/NotSignedInError.js';
 import { StoreChoiceError } from '../stores/StoreChoiceError.js';
 
 /** What the model should do about an API error code (spec SPEC-mcp-server 3.4), from the error catalog. */
@@ -29,7 +30,7 @@ export function toolError(error: unknown, storeLabel: string | null = null): Cal
 
 /** The code and hint of a Stablevoy failure; anything else is a bug and is thrown on. */
 export function errorText(error: unknown): string {
-  if (error instanceof StoreChoiceError) return error.message;
+  if (error instanceof StoreChoiceError || error instanceof NotSignedInError) return error.message;
   if (error instanceof AuthenticationError) return `authentication_failed: the API key was refused, probably revoked in the dashboard. Run npx stablevoy-mcp login again. ${error.detail}`;
   if (error instanceof RateLimitedError) return `rate_limited: ${error.detail} Retry after ${error.retryAfterSeconds ?? 60} seconds.`;
   if (error instanceof ApiError) return `${error.code}: ${error.detail}${HINTS[error.code] === undefined ? '' : ` ${HINTS[error.code]}`}`;

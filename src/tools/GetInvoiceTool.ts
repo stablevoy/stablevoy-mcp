@@ -2,7 +2,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { NotFoundError, type Invoice } from 'stablevoy';
 import { z } from 'zod';
 import type { StoreClient } from '../stores/StoreClient.js';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { invoiceView } from './InvoiceView.js';
 import { storeArgument } from './StoreArgument.js';
 import type { Tool } from './Tool.js';
@@ -14,11 +14,11 @@ export class GetInvoiceTool implements Tool {
   readonly name = 'get_invoice';
   readonly title = 'Read an invoice';
   readonly description =
-    'Gets one invoice by its id: status, amountUsd, reference, dates (createdAt, expiresAt, paidAt), holdReason, networks and the payments received. The id comes from create_invoice, list_invoices or the merchant. Without store every connected store is asked; an id no store has gives not_found. To find invoices by status, reference or date, use list_invoices. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Gets one invoice by its id: status, amountUsd, reference, dates (createdAt, expiresAt, paidAt), holdReason, networks and the payments received. Needs a store key (npx stablevoy-mcp login). The id comes from create_invoice, list_invoices or the merchant. Without store every connected store is asked; an id no store has gives not_found. To find invoices by status, reference or date, use list_invoices. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { invoiceId: z.uuid().describe('The invoice id.'), store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(args: { invoiceId: string; store?: string }): Promise<CallToolResult> {
     try {

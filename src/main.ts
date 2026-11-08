@@ -16,6 +16,7 @@ import { LOGIN_TIMEOUT_MS, LoginCommand } from './login/LoginCommand.js';
 import { LogoutCommand } from './login/LogoutCommand.js';
 import { LoopbackListener } from './login/LoopbackListener.js';
 import { StoresCommand } from './login/StoresCommand.js';
+import { DocsResources } from './resources/DocsResources.js';
 import { VERSION } from './version.js';
 
 const out = (line: string): void => void process.stderr.write(`${line}\n`);
@@ -25,6 +26,7 @@ try {
   const config = configFrom(process.env);
   const credentials = new CredentialStore(configDir(process.env, process.platform, homedir()));
   const revoke = sdkKeyRevoker({ baseUrl: config.apiUrl, userAgentSuffix });
+  const docs = new DocsLibrary({ fetcher: new DocsFetcher({ fetch: globalThis.fetch, now: Date.now }), siteUrl: config.siteUrl, apiUrl: config.apiUrl });
   const cli = new Cli({
     config,
     version: VERSION,
@@ -42,7 +44,8 @@ try {
     }),
     logout: new LogoutCommand({ credentials, revoke, out }),
     stores: new StoresCommand({ credentials, revoke, out }),
-    docs: new DocsLibrary({ fetcher: new DocsFetcher({ fetch: globalThis.fetch, now: Date.now }), siteUrl: config.siteUrl, apiUrl: config.apiUrl }),
+    docs,
+    docsResources: new DocsResources(docs),
     sdkFor: (apiKey) => Stablevoy.create({ apiKey, baseUrl: config.apiUrl, userAgentSuffix }),
     serve: (server) => server.connect(new StdioServerTransport()),
     out,

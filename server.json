@@ -6,19 +6,19 @@
     "url": "https://github.com/stablevoy/stablevoy-mcp",
     "source": "github"
   },
-  "version": "0.3.0",
+  "version": "0.4.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "stablevoy-mcp",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "STABLEVOY_API_KEY",
-          "description": "A store API key (sk_live_...) for one store. Leave unset to use the keys of npx stablevoy-mcp login; with neither, only the documentation tools are offered.",
+          "description": "A store API key (sk_live_...) for one store. Leave unset to use the keys of npx stablevoy-mcp login; with neither, the store tools answer not_signed_in and the documentation works.",
           "isRequired": false,
           "format": "string",
           "isSecret": true

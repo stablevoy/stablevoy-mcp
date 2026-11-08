@@ -11,7 +11,8 @@ import { CredentialStore } from '../src/credentials/CredentialStore.js';
 import { LoginCommand } from '../src/login/LoginCommand.js';
 import { LogoutCommand } from '../src/login/LogoutCommand.js';
 import { SERVER_INSTRUCTIONS } from '../src/server/ServerFactory.js';
-import { NOT_SIGNED_IN } from '../src/server/SignInNotice.js';
+import { NOT_SIGNED_IN, NOT_SIGNED_IN_ERROR } from '../src/server/SignInNotice.js';
+import { DocsResources } from '../src/resources/DocsResources.js';
 import { fakeDocs } from './support/FakeSite.js';
 import { LoopbackListener } from '../src/login/LoopbackListener.js';
 import { StoresCommand } from '../src/login/StoresCommand.js';
@@ -56,6 +57,7 @@ describe('the CLI', () => {
       hostname: 'h'.repeat(50),
       credentials,
       docs: fakeDocs().docs,
+      docsResources: new DocsResources(fakeDocs().docs),
       login: Object.assign(login, { run: (profile: string, name: string) => Promise.resolve((calls.push(`login ${profile} ${name}`), 0)) }),
       logout: Object.assign(new LogoutCommand({ credentials, revoke, out }), { run: (profile: string) => Promise.resolve((calls.push(`logout ${profile}`), 0)) }),
       stores: Object.assign(stores, { list: (profile: string) => Promise.resolve((calls.push(`stores ${profile}`), 0)), remove: (profile: string, store: string) => Promise.resolve((calls.push(`remove ${profile} ${store}`), 0)) }),
@@ -90,14 +92,18 @@ describe('the CLI', () => {
   });
 
   it('serves the stores of STABLEVOY_API_KEY, or of the login profile, and says how to connect when there is neither', async () => {
-    // No key at all: the docs tools only, said in the log, the instructions and under each docs result.
+    // No key at all: every tool is listed, the store tools answer not_signed_in, said in the log and the instructions.
     expect(await new Cli(deps()).run([])).toBe(0);
-    expect(lines.pop()).toBe('No Stablevoy key: serving the documentation tools only. Run npx stablevoy-mcp login, or set STABLEVOY_API_KEY in the MCP client config.');
-    const docsOnly = await connectClient(served.shift() as McpServer);
-    expect((await docsOnly.client.listTools()).tools.map((t) => t.name).sort()).toEqual(['get_doc', 'search_docs']);
-    expect(docsOnly.client.getInstructions()).toBe(`${SERVER_INSTRUCTIONS} ${NOT_SIGNED_IN}`);
-    expect(textOf(await docsOnly.call('search_docs', { query: 'create store' }))).toContain(NOT_SIGNED_IN);
-    expect(textOf(await docsOnly.call('get_doc', { path: '/mcp.md' })).endsWith(`\n${NOT_SIGNED_IN}\n`)).toBe(true);
+    expect(lines.pop()).toBe('No Stablevoy key: the store tools answer not_signed_in, the documentation works. Run npx stablevoy-mcp login, or set STABLEVOY_API_KEY in the MCP client config.');
+    const keyless = await connectClient(served.shift() as McpServer);
+    expect((await keyless.client.listTools()).tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_doc', 'get_invoice', 'get_store', 'list_invoices', 'list_stores', 'list_unmatched_transfers', 'search_docs', 'summarize_payments']);
+    expect(keyless.client.getInstructions()).toBe(`${SERVER_INSTRUCTIONS} ${NOT_SIGNED_IN}`);
+    expect(textOf(await keyless.call('search_docs', { query: 'create store' }))).toContain(NOT_SIGNED_IN);
+    expect(textOf(await keyless.call('get_doc', { path: '/mcp.md' })).endsWith(`\n${NOT_SIGNED_IN}\n`)).toBe(true);
+    const refused = await keyless.call('list_stores');
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toBe(NOT_SIGNED_IN_ERROR);
+    expect((await keyless.client.listPrompts()).prompts.map((p) => p.name)).toHaveLength(5);
 
     expect(await new Cli(deps({ STABLEVOY_API_KEY: 'sk_live_env' })).run([])).toBe(0);
     const single = await connectClient(served[0] as McpServer);

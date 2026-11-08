@@ -1,6 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { canAcceptPayments } from 'stablevoy';
-import type { StoreClients } from '../stores/StoreClients.js';
+import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { usdOf } from './AmountUsd.js';
 import { storeArgument } from './StoreArgument.js';
 import type { Tool } from './Tool.js';
@@ -12,11 +12,11 @@ export class GetStoreTool implements Tool {
   readonly name = 'get_store';
   readonly title = 'Read a store and its settings';
   readonly description =
-    'Gets one store with its settings, read only. Returned: status and canAcceptPayments; networks (enabledNetworks, networksWithoutPayout, evmPayoutStatus, evmNetworksBlocked, payoutAddresses); limits (invoiceRangeUsd in effect, storeLimitsUsd, platformLimitsUsd, feeBps); addresses (websiteUrl, defaultReturnUrl, webhookUrl). Call it first when create_invoice fails or a store cannot accept payments. With one connected store leave store out and that store is read; with several, name one from list_stores, which also gives the short view of all. Settings change in the Stablevoy dashboard. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Gets one store with its settings, read only. Needs a store key (npx stablevoy-mcp login). Returned: status and canAcceptPayments; networks (enabledNetworks, networksWithoutPayout, evmPayoutStatus, evmNetworksBlocked, payoutAddresses); limits (invoiceRangeUsd in effect, storeLimitsUsd, platformLimitsUsd, feeBps); addresses (websiteUrl, defaultReturnUrl, webhookUrl). Call it first when create_invoice fails or a store cannot accept payments. With one connected store leave store out and that store is read; with several, name one from list_stores, which also gives the short view of all. Settings change in the Stablevoy dashboard. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
-  constructor(private readonly stores: StoreClients) {}
+  constructor(private readonly stores: StoreDirectory) {}
 
   async run(args: { store?: string }): Promise<CallToolResult> {
     try {
