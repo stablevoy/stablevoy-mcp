@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Store API keys in Stablevoy's own format (`svk_live_...`, `svk_test_...`, ending in a checksum) are accepted in `STABLEVOY_API_KEY` and from the login, next to the older `sk_live_` / `sk_test_`. A new-format key with a wrong or missing character is refused at start as mistyped. Needs the stablevoy SDK 1.8.0.
+- Clearer descriptions of get_store (live reads, grouped fields, what happens without store when several are connected) and search_docs (how words are matched and ranked, what a hit holds).
+- The login shows the start of each key with 4 characters after the prefix, as the dashboard does, for both formats.
+
 ## 0.4.1
 
 - The package description fits the 255 characters npm keeps; 0.4.0 showed it cut off in search results. No change to the server.

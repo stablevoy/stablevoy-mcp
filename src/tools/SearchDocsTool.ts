@@ -1,7 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { DocsLibrary } from '../docs/DocsLibrary.js';
-import { MAX_HITS } from '../docs/SectionSearch.js';
+import { MAX_HITS, MAX_SECTION_CHARS } from '../docs/SectionSearch.js';
 import { docsToolError } from './DocsToolError.js';
 import type { Tool } from './Tool.js';
 import { toolResult } from './ToolResult.js';
@@ -10,8 +10,8 @@ import { toolResult } from './ToolResult.js';
 export class SearchDocsTool implements Tool {
   readonly name = 'search_docs';
   readonly title = 'Search the Stablevoy documentation';
-  readonly description = `Searches the Stablevoy documentation and returns up to ${MAX_HITS} matching sections, each with the page title, its path for get_doc, the page address, the heading and the text. Needs no key. Use it for how-to questions: connecting a shop, creating a store, webhooks and their signatures, networks and fees, the payment widget, the plugins, recovery. Ask with a few plain words, for example "webhook signature" or "Tron fee". An empty list means no section matched; try other words. Call get_doc with a path to read the whole page. The pages are kept for an hour, so searching again costs nothing.`;
-  readonly input = { query: z.string().min(2).max(200).describe('A few words to look for, for example "webhook retries".') };
+  readonly description = `Searches the Stablevoy documentation for how-to questions and returns up to ${MAX_HITS} matching sections. Needs no key. Matching ignores case and common words such as "the", "how" and "to"; a section ranks higher for each query word it contains, more when the word is in its heading or page title, so two to four specific words work best, for example "webhook signature" or "Tron fee". Each hit has the page title, its path for get_doc, the page address, the heading and up to ${MAX_SECTION_CHARS} characters of the section. An empty list means no word matched; try other words. Topics: connecting a shop, stores, webhooks and their signatures, networks and fees, the payment widget, the plugins, recovery. Call get_doc with a path to read the whole page. The pages are kept for an hour, so searching again costs nothing.`;
+  readonly input = { query: z.string().min(2).max(200).describe('2 to 200 characters: the words to look for, for example "webhook retries". Words shorter than 2 letters and common words are dropped; a query of only those matches nothing.') };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
   constructor(

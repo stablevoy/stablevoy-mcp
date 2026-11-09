@@ -1,8 +1,7 @@
+import { checkApiKey } from 'stablevoy';
 import { McpConfigError } from './McpConfigError.js';
 import { profileName } from './ProfileName.js';
 import { serviceUrl } from './ServiceUrl.js';
-
-const API_KEY = /^sk_(live|test)_[A-Za-z0-9_-]+$/;
 
 export type KeySource = { readonly kind: 'key'; readonly apiKey: string } | { readonly kind: 'profile'; readonly profile: string };
 
@@ -26,7 +25,11 @@ export function configFrom(env: Readonly<Record<string, string | undefined>>): C
   if (readOnly !== undefined && readOnly !== '' && readOnly !== 'true' && readOnly !== 'false') throw new McpConfigError('STABLEVOY_MCP_READ_ONLY must be true or false');
   const profile = profileName(env['STABLEVOY_MCP_PROFILE']);
   const apiKey = env['STABLEVOY_API_KEY'];
-  if (apiKey !== undefined && apiKey !== '' && !API_KEY.test(apiKey)) throw new McpConfigError('STABLEVOY_API_KEY must be a store API key (sk_live_... or sk_test_...)');
+  if (apiKey !== undefined && apiKey !== '') {
+    const check = checkApiKey(apiKey);
+    if (check === 'mistyped') throw new McpConfigError('STABLEVOY_API_KEY looks mistyped or cut: copy the key again from the dashboard');
+    if (check !== 'ok' || !/^[A-Za-z0-9_-]+$/.test(apiKey)) throw new McpConfigError('STABLEVOY_API_KEY must be a store API key (svk_live_... or svk_test_..., or the older sk_live_... or sk_test_...)');
+  }
   const connectUrl = serviceUrl('STABLEVOY_CONNECT_URL', env['STABLEVOY_CONNECT_URL'], 'https://stablevoy.com/app/connect-app/', false);
   const connectPage = new URL(connectUrl);
   connectPage.search = '';
