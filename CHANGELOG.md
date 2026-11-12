@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- get_store and list_stores show the payout addresses a store uses, whether each is the store's own or the account one (`payoutSources`), and the account addresses (`accountPayoutAddresses`), read only. A store can now have its own payout address, set in the dashboard. get_store also returns `archivedAt`. Needs the stablevoy SDK 1.9.0.
+- An archived store gets its own hint (`store_archived`: restore it in the dashboard and reconnect), and the authentication hint says a key also stops working when its store is disabled or archived.
+- Shorter sentences in get_store and search_docs, with what they now also say: the API takes up to 300 requests a minute from one address; search_docs has no paging past its best hits and this running server keeps the pages for an hour. Case and common words are described once, in the query argument.
+
 ## 0.5.0
 
 - Store API keys in Stablevoy's own format (`svk_live_...`, `svk_test_...`, ending in a checksum) are accepted in `STABLEVOY_API_KEY` and from the login, next to the older `sk_live_` / `sk_test_`. A new-format key with a wrong or missing character is refused at start as mistyped. Needs the stablevoy SDK 1.8.0.

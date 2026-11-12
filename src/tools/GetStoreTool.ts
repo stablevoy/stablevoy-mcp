@@ -12,7 +12,7 @@ export class GetStoreTool implements Tool {
   readonly name = 'get_store';
   readonly title = 'Read a store and its settings';
   readonly description =
-    'Gets one store with its settings, read only. Needs a store key (npx stablevoy-mcp login). Each call reads the store, the platform limits and the fee live from the API (three requests, nothing cached), so a change made in the dashboard shows at once; nothing here can change a setting, that is done in the Stablevoy dashboard. Returned, grouped: status and canAcceptPayments; networks and payout state; the invoice range in effect with the store and platform limits and the fee; the website, return and webhook addresses. Call it first when create_invoice fails or a store cannot accept payments; list_stores gives the short view of all stores. Leaving store out works only with one connected store: with several the answer is an error listing their names and ids. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Gets one store with its settings, read only. Needs a store key (npx stablevoy-mcp login). Each call makes three live requests: the store, the platform limits and the fee. Nothing is cached, so a change made in the dashboard shows at once. Nothing here can change a setting. That is done in the Stablevoy dashboard. Returned, grouped: status and canAcceptPayments; networks and payout state, with the payout addresses this store uses, whether each is its own or the account one, and the account addresses; the invoice range in effect with the store and platform limits and the fee; the website, return and webhook addresses; archivedAt. Call it first when create_invoice fails or a store cannot accept payments. For the short view of all stores use list_stores. Leaving store out works only with one connected store. With several, the answer is an error listing their names and ids. The API takes up to 300 requests a minute from one address. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
@@ -32,6 +32,8 @@ export class GetStoreTool implements Tool {
         enabledNetworks: store.enabledNetworks,
         networksWithoutPayout: store.networksWithoutPayout,
         payoutAddresses: store.payoutAddresses,
+        payoutSources: store.payoutSources,
+        accountPayoutAddresses: store.accountPayoutAddresses,
         evmPayoutStatus: store.evmPayoutStatus,
         evmNetworksBlocked: store.evmNetworksBlocked,
         invoiceRangeUsd: { min: usdOf(min), max: usdOf(max) },
@@ -42,6 +44,7 @@ export class GetStoreTool implements Tool {
         defaultReturnUrl: store.defaultReturnUrl,
         webhookUrl: store.webhookUrl,
         connectedPlatform: store.connectedPlatform,
+        archivedAt: store.archivedAt === null ? null : store.archivedAt.toISOString(),
       });
     } catch (error) {
       return toolError(error, args.store ?? null);

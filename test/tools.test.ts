@@ -98,6 +98,16 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     expect(textOf(result)).toMatch(/^Store "Main" is active; invoices from \d+\.\d\d to \d+\.\d\d USD\./);
   });
 
+  it('reads where each payout address comes from, the account addresses and the archive date (store payout addresses)', async () => {
+    const own = { payoutAddresses: { evm: '0x' + 'cc'.repeat(20), tron: null }, payoutSources: { evm: 'store', tron: null }, accountPayoutAddresses: { evm: '0x' + 'bb'.repeat(20), tron: null } };
+    const store = { ...example('GET', '/v1/store', 200), id: 's1', name: 'Main', ...own };
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store': () => ({ status: 200, body: store }) }) }]);
+    expect((await call('get_store')).structuredContent).toMatchObject({ ...own, archivedAt: null });
+    expect((await call('list_stores')).structuredContent).toMatchObject({ stores: [{ id: 's1', ...own }] });
+    const archived = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store': () => ({ status: 200, body: { ...store, archivedAt: '2026-11-10T10:00:00.000Z' } }) }) }]);
+    expect((await archived.call('get_store')).structuredContent).toMatchObject({ archivedAt: '2026-11-10T10:00:00.000Z' });
+  });
+
   it('creates an invoice from a dollar string, idempotent by reference, and says when it was replayed', async () => {
     const created = example('POST', '/v1/invoices', 201);
     const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'POST /v1/invoices': () => ({ status: 201, body: { ...created, replayed: false } }) }) }]);
