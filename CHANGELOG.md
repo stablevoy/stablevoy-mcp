@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+
+- get_store returns `webhookHealth`, the state of the store's webhook endpoint (null without a webhook URL): `status` active, failing (at least 10 failed attempts, with `pausesAt`, when it will be paused if it keeps failing) or paused (failed for 24 hours; new events wait up to 30 days until the merchant resumes it in the dashboard), with `failingSince`, `failedAttempts`, `pausedAt` and `pauseReason`, dates in ISO 8601. Read only, like the rest. Needs the stablevoy SDK 1.10.0.
+- The list_unmatched_transfers description says what `sharedWithStores` counts: the active stores that offer the network and pay out to the same wallet.
+
 ## 0.6.0
 
 - get_store and list_stores show the payout addresses a store uses, whether each is the store's own or the account one (`payoutSources`), and the account addresses (`accountPayoutAddresses`), read only. A store can now have its own payout address, set in the dashboard. get_store also returns `archivedAt`. Needs the stablevoy SDK 1.9.0.

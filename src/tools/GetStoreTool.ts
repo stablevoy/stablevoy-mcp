@@ -1,5 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { canAcceptPayments } from 'stablevoy';
+import { canAcceptPayments, type WebhookHealth } from 'stablevoy';
 import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { usdOf } from './AmountUsd.js';
 import { storeArgument } from './StoreArgument.js';
@@ -12,7 +12,7 @@ export class GetStoreTool implements Tool {
   readonly name = 'get_store';
   readonly title = 'Read a store and its settings';
   readonly description =
-    'Gets one store with its settings, read only. Needs a store key (npx stablevoy-mcp login). Each call makes three live requests: the store, the platform limits and the fee. Nothing is cached, so a change made in the dashboard shows at once. Nothing here can change a setting. That is done in the Stablevoy dashboard. Returned, grouped: status and canAcceptPayments; networks and payout state, with the payout addresses this store uses, whether each is its own or the account one, and the account addresses; the invoice range in effect with the store and platform limits and the fee; the website, return and webhook addresses; archivedAt. Call it first when create_invoice fails or a store cannot accept payments. For the short view of all stores use list_stores. Leaving store out works only with one connected store. With several, the answer is an error listing their names and ids. The API takes up to 300 requests a minute from one address. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
+    'Gets one store with its settings, read only. Needs a store key (npx stablevoy-mcp login). Each call makes three live requests: the store, the platform limits and the fee. Nothing is cached, so a change made in the dashboard shows at once. Nothing here can change a setting. That is done in the Stablevoy dashboard. Returned, grouped: status and canAcceptPayments; networks and payout state, with the payout addresses this store uses, whether each is its own or the account one, and the account addresses; the invoice range in effect with the store and platform limits and the fee; the website, return and webhook addresses; webhookHealth, the state of the webhook endpoint (null without a webhook URL): status active, failing after 10 failed attempts with pausesAt (when it will be paused if it keeps failing) or paused after 24 hours of failures, when new events wait until the merchant resumes it in the dashboard; archivedAt. Call it first when create_invoice fails or a store cannot accept payments. For the short view of all stores use list_stores. Leaving store out works only with one connected store. With several, the answer is an error listing their names and ids. The API takes up to 300 requests a minute from one address. A failure comes back as an error with its code and what to do, for example rate_limited with the seconds to wait.';
   readonly input = { store: storeArgument };
   readonly annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
 
@@ -43,6 +43,7 @@ export class GetStoreTool implements Tool {
         websiteUrl: store.websiteUrl,
         defaultReturnUrl: store.defaultReturnUrl,
         webhookUrl: store.webhookUrl,
+        webhookHealth: webhookHealthOf(store.webhookHealth),
         connectedPlatform: store.connectedPlatform,
         archivedAt: store.archivedAt === null ? null : store.archivedAt.toISOString(),
       });
@@ -50,4 +51,11 @@ export class GetStoreTool implements Tool {
       return toolError(error, args.store ?? null);
     }
   }
+}
+
+/** Dates as ISO strings, like the other dates of the answer. */
+function webhookHealthOf(h: WebhookHealth | null): Record<string, unknown> | null {
+  if (h === null) return null;
+  const iso = (d: Date | null) => (d === null ? null : d.toISOString());
+  return { status: h.status, failingSince: iso(h.failingSince), failedAttempts: h.failedAttempts, pausesAt: iso(h.pausesAt), pausedAt: iso(h.pausedAt), pauseReason: h.pauseReason };
 }

@@ -108,6 +108,15 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     expect((await archived.call('get_store')).structuredContent).toMatchObject({ archivedAt: '2026-11-10T10:00:00.000Z' });
   });
 
+  it('reads the state of the webhook endpoint with ISO dates, null without a webhook URL (paused endpoints)', async () => {
+    const paused = { status: 'paused', failingSince: '2026-11-12T10:00:00.000Z', failedAttempts: 31, pausesAt: null, pausedAt: '2026-11-13T10:00:00.000Z', pauseReason: 'Endpoint answered HTTP 500' };
+    const store = { ...example('GET', '/v1/store', 200), id: 's1', name: 'Main', webhookHealth: paused };
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store': () => ({ status: 200, body: store }) }) }]);
+    expect((await call('get_store')).structuredContent).toMatchObject({ webhookHealth: paused });
+    const none = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store': () => ({ status: 200, body: { ...store, webhookHealth: null } }) }) }]);
+    expect((await none.call('get_store')).structuredContent).toMatchObject({ webhookHealth: null });
+  });
+
   it('creates an invoice from a dollar string, idempotent by reference, and says when it was replayed', async () => {
     const created = example('POST', '/v1/invoices', 201);
     const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'POST /v1/invoices': () => ({ status: 201, body: { ...created, replayed: false } }) }) }]);
