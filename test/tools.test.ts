@@ -4,7 +4,7 @@ import { createServer, SERVER_INSTRUCTIONS } from '../src/server/ServerFactory.j
 import { toolsFor } from '../src/server/toolsFor.js';
 import { StoreClient } from '../src/stores/StoreClient.js';
 import { StoreClients } from '../src/stores/StoreClients.js';
-import { centsOf, usdOf, usdOfMicros } from '../src/tools/AmountUsd.js';
+import { centsOf, decimalOf, minorUnitsOf, usdOf, usdOfMicros } from '../src/tools/AmountUsd.js';
 import { idempotencyKeyOf } from '../src/tools/IdempotencyKey.js';
 import { errorText } from '../src/tools/ToolError.js';
 import { fakeStablevoy, problem, type Routes } from './support/FakeApi.js';
@@ -37,11 +37,18 @@ describe('amounts and idempotency', () => {
     expect([usdOf(1999), usdOf(5), usdOf(25_000)]).toEqual(['19.99', '0.05', '250.00']);
   });
 
+  it('turns a price in any currency into its smallest unit by the exponent, and back', () => {
+    expect([minorUnitsOf('49.99', 2), minorUnitsOf('49.9', 2), minorUnitsOf('1500', 0), minorUnitsOf('7', 2)]).toEqual([4999, 4990, 1500, 700]);
+    for (const [bad, exponent] of [['1.5', 0], ['1.234', 2], ['', 2], ['-1', 0], ['1e3', 2]] as const) expect(minorUnitsOf(bad, exponent), bad).toBeNull();
+    expect([decimalOf(4999, 2), decimalOf(1500, 0), decimalOf(5, 2)]).toEqual(['49.99', '1500', '0.05']);
+  });
+
   it('keys the same store, amount and reference alike, in printable ASCII', () => {
     const key = idempotencyKeyOf('s1', 1999, 'заказ 42');
     expect(key).toMatch(/^mcp-[0-9a-f]{64}$/);
     expect(idempotencyKeyOf('s1', 1999, 'заказ 42')).toBe(key);
     expect(idempotencyKeyOf('s2', 1999, 'заказ 42')).not.toBe(key);
+    expect(idempotencyKeyOf('s1', '1999 EUR', 'заказ 42')).not.toBe(key);
   });
 });
 
@@ -171,6 +178,38 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     expect(textOf(refused)).toBe('payout_address_unacknowledged: Review the payout address The merchant must review and confirm the payout address in the Stablevoy dashboard. Do not retry.');
   });
 
+  it('creates an invoice priced in another currency by its exponent, keyed by price, and names both amounts', async () => {
+    const pricing = { currency: 'EUR', amount: 4999, exponent: 2, usdPerUnit: '1.0992', rateSource: 'ecb', rateAt: '2026-11-19T15:00:00.000Z' };
+    const created = { ...example('POST', '/v1/invoices', 201), amountUsdCents: 5495, pricing, replayed: false };
+    const currencies = () => ({ status: 200, body: example('GET', '/v1/currencies', 200) });
+    const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/currencies': currencies, 'POST /v1/invoices': () => ({ status: 201, body: created }) }) }]);
+    const result = await call('create_invoice', { amount: '49.99', currency: 'eur', reference: 'acme-october' });
+    expect(textOf(result)).toContain('Invoice created for 49.99 EUR (54.95 USD). Payment link:');
+    expect(result.structuredContent).toMatchObject({ amountUsd: '54.95', price: { currency: 'EUR', amount: '49.99', usdPerUnit: '1.0992', rateSource: 'ecb', rateAt: '2026-11-19T15:00:00.000Z' } });
+    const post = fakes[0]?.sent.find((s) => s.key === 'POST /v1/invoices');
+    expect(post?.body).toEqual({ amount: 4999, currency: 'EUR', externalReference: 'acme-october' });
+    expect(post?.headers['idempotency-key']).toBe(idempotencyKeyOf('s1', '4999 EUR', 'acme-october'));
+  });
+
+  it('refuses a price given both ways, half given, in an unknown currency or with too many decimals, before creating anything', async () => {
+    const currencies = () => ({ status: 200, body: example('GET', '/v1/currencies', 200) });
+    const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/currencies': currencies }) }]);
+    expect(textOf(await call('create_invoice', { amountUsd: '5', amount: '5', currency: 'EUR' }))).toBe('invalid_price: give amountUsd, or amount with currency, not both.');
+    expect(textOf(await call('create_invoice', {}))).toBe('invalid_price: give amountUsd, or amount with currency.');
+    expect(textOf(await call('create_invoice', { amount: '5' }))).toBe('invalid_price: give amountUsd, or amount with currency.');
+    expect(textOf(await call('create_invoice', { amount: '5', currency: 'XYZ' }))).toBe('currency_not_supported: XYZ is not supported; use one of USD, EUR, JPY.');
+    expect(textOf(await call('create_invoice', { amount: '1.5', currency: 'JPY' }))).toBe('invalid_amount: amount must be a positive amount in JPY with at most 0 decimals.');
+    expect(textOf(await call('create_invoice', { amount: '0', currency: 'EUR' }))).toContain('invalid_amount');
+    expect(fakes[0]?.sent.filter((s) => s.key === 'POST /v1/invoices')).toHaveLength(0);
+  });
+
+  it('passes a missing exchange rate with what to do', async () => {
+    const currencies = () => ({ status: 200, body: example('GET', '/v1/currencies', 200) });
+    const refused = () => ({ status: 503, body: problem(503, 'exchange_rate_unavailable', 'No exchange rate for EUR') });
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/currencies': currencies, 'POST /v1/invoices': refused }) }]);
+    expect(textOf(await call('create_invoice', { amount: '5', currency: 'EUR' }))).toBe('exchange_rate_unavailable: No exchange rate for EUR There is no fresh exchange rate for that currency right now. Try again later, give the price as amountUsd, or ask the merchant to set the store rate in the Stablevoy dashboard.');
+  });
+
   it('finds an invoice in whichever store has it, and says when none has', async () => {
     const invoice = example('GET', '/v1/invoices/{invoiceId}', 200);
     const missing = { [`GET /v1/invoices/${INVOICE}`]: () => ({ status: 404, body: problem(404, 'not_found', 'Invoice not found') }) };
@@ -179,7 +218,7 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
       { routes: storeRoutes('Second', 's2', { [`GET /v1/invoices/${INVOICE}`]: () => ({ status: 200, body: { ...invoice, id: INVOICE } }) }), known: { id: 's2', name: 'Second' } },
     ]);
     const found = await call('get_invoice', { invoiceId: INVOICE });
-    expect(found.structuredContent).toMatchObject({ store: 'Second', id: INVOICE, status: invoice['status'] });
+    expect(found.structuredContent).toMatchObject({ store: 'Second', id: INVOICE, status: invoice['status'], price: null });
     expect(textOf(await call('get_invoice', { invoiceId: INVOICE, store: 'Main' }))).toBe(`not_found: no connected store has invoice ${INVOICE}.`);
     const broken = await serverWith([{ routes: { [`GET /v1/invoices/${INVOICE}`]: () => new TypeError('fetch failed') } }]);
     expect(textOf(await broken.call('get_invoice', { invoiceId: INVOICE }))).toContain('TransportError');

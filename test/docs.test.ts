@@ -109,7 +109,8 @@ describe('the docs library', () => {
     expect(outline.text).toContain('## GET /v1/invoices/summary');
     expect(outline.text).toContain(`Base URL: ${API}.`);
     expect(outline.text).toMatch(/- query parameter `period`: /);
-    expect(outline.text).toMatch(/- body field `amountUsdCents` \(required\)/);
+    expect(outline.text).toMatch(/- body field `amountUsdCents`/);
+    expect(outline.text).toMatch(/- body field `invoiceId` \(required\)/);
     expect(outline.text).toMatch(/Auth: \S+/);
     expect((await docs.read('errors')).text).toContain('- `invalid_invoice_filter` (HTTP 400): A filter is wrong. What to do: Fix the dates.');
   });

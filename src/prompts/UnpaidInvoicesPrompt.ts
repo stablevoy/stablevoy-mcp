@@ -17,7 +17,7 @@ export class UnpaidInvoicesPrompt implements Prompt {
         'Find the Stablevoy invoices that are still waiting for payment.',
         `1. Call list_invoices with status "awaiting_payment" and limit 100${store}. While nextCursor is set, call it again with that cursor and the same store, at most 5 calls in all; say if more are left.`,
         '2. Sort them by expiresAt.',
-        '3. List first the ones that expire within the next 24 hours, then the rest, each with amountUsd, reference, expiresAt and checkoutUrl.',
+        '3. List first the ones that expire within the next 24 hours, then the rest, each with amountUsd (and price when it was set in another currency), reference, expiresAt and checkoutUrl.',
         '4. Remind me that Stablevoy does not email buyers: I send the checkoutUrl to the buyer myself.',
         READ_ONLY_RULE,
       ].join('\n'),

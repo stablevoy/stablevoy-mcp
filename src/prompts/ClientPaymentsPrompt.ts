@@ -19,7 +19,7 @@ export class ClientPaymentsPrompt implements Prompt {
         `Find every Stablevoy invoice whose reference starts with ${reference}.`,
         `1. Call list_invoices with search ${reference}${store}. While nextCursor is set, call it again with that cursor and the same store, at most 5 calls in all.`,
         '2. Call get_invoice for each invoice found, with its store.',
-        '3. Report each invoice: status, amountUsd, the amount received, network and token, every payment with its txHash and explorer link, createdAt and paidAt. Say plainly when nothing was found.',
+        '3. Report each invoice: status, amountUsd and its price when it was set in another currency, the amount received, network and token, every payment with its txHash and explorer link, createdAt and paidAt. Say plainly when nothing was found.',
         READ_ONLY_RULE,
       ].join('\n'),
     );

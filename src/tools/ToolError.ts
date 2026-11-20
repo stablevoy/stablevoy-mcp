@@ -17,7 +17,10 @@ const HINTS: Readonly<Record<string, string>> = {
   invalid_invoice_lifetime: 'expiresInMinutes must be from 15 to 10080; leave it out for the store default.',
   open_invoice_limit_reached: 'The store has as many unpaid invoices as it may have open at once. Cancel the ones no longer needed with cancel_invoice (list_invoices with status awaiting_payment finds them) or let them expire, then try again.',
   invalid_invoice_filter: 'Check the filters: status and source from the tool description, days as YYYY-MM-DD with createdFrom not after createdTo. summarize_payments covers at most 92 days per call; split a year into four quarters.',
-  conflict: 'The same amount and reference were used before with other parameters, or the invoice changed at the same moment; call get_invoice or list_invoices to see it, or use another reference.',
+  currency_not_supported: 'Use one of the currencies named in the message, or give the price as amountUsd.',
+  invalid_price: 'Give amountUsd, or amount with currency, not both.',
+  exchange_rate_unavailable: 'There is no fresh exchange rate for that currency right now. Try again later, give the price as amountUsd, or ask the merchant to set the store rate in the Stablevoy dashboard.',
+  conflict: 'The same price and reference were used before with other parameters, or the invoice changed at the same moment; call get_invoice or list_invoices to see it, or use another reference.',
 };
 
 /**

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- create_invoice takes a price in the shop currency: `amount` (a decimal string, "49.99", or "1500" for JPY) with `currency` (ISO 4217, one of 30), instead of `amountUsd`. The price is turned into US dollars once, at creation, with the store's own rate or the ECB reference rate. Give one form only. Needs the stablevoy SDK 1.11.0.
+- get_invoice, list_invoices, create_invoice and cancel_invoice return `price`: the currency, amount, the rate in US dollars per unit, its source and time; null for an invoice priced in dollars. The answer of create_invoice names both amounts.
+- Hints for `currency_not_supported`, `invalid_price` and `exchange_rate_unavailable`.
+- get_invoice says it returns every payment, with no paging. Shorter sentence on `sharedWithStores` in list_unmatched_transfers.
+
 ## 0.7.0
 
 - get_store returns `webhookHealth`, the state of the store's webhook endpoint (null without a webhook URL): `status` active, failing (at least 10 failed attempts, with `pausesAt`, when it will be paused if it keeps failing) or paused (failed for 24 hours; new events wait up to 30 days until the merchant resumes it in the dashboard), with `failingSince`, `failedAttempts`, `pausedAt` and `pauseReason`, dates in ISO 8601. Read only, like the rest. Needs the stablevoy SDK 1.10.0.

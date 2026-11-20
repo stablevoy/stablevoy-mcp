@@ -81,7 +81,7 @@ Adding a store always goes through the browser, since it needs your wallet. The 
 | --- | --- |
 | list_stores | The connected stores, whether each can take payments and its EVM payout status. |
 | get_store | A store's settings: networks, payout addresses, the EVM payout status, invoice limits, fee, website, return and webhook URLs, and the state of the webhook endpoint (active, failing or paused). Read only. |
-| create_invoice | An invoice for an amount in dollars ("19.99"), with an optional reference, return URL and payment window (expiresInMinutes, 15 to 10080; the store default when left out); returns the payment link, which you send to the buyer yourself. The same amount and reference return the same invoice instead of a second one. |
+| create_invoice | An invoice for an amount in dollars ("19.99"), or in one of 30 shop currencies (amount "49.99" with currency "EUR", turned into dollars once at creation), with an optional reference, return URL and payment window (expiresInMinutes, 15 to 10080; the store default when left out); returns the payment link, which you send to the buyer yourself. The same price and reference return the same invoice instead of a second one. |
 | cancel_invoice | Cancels an invoice no payment has been seen for, so the buyer is told not to pay it. Money that still arrives later marks it paid_late. |
 | get_invoice | An invoice by id, with the payments received. |
 | list_invoices | Invoices newest first, filtered by status, source, search and the days they were created. |
