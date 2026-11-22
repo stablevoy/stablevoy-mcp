@@ -86,6 +86,8 @@ Adding a store always goes through the browser, since it needs your wallet. The 
 | get_invoice | An invoice by id, with the payments received. |
 | list_invoices | Invoices newest first, filtered by status, source, search and the days they were created. |
 | summarize_payments | Totals for a period (last_7_days, last_30_days, this_month, last_month, last_3_months, or your own days, at most 92 per call): invoices per status, the amount invoiced and the money received per network and token. With several stores, each store and the total. |
+| get_checkout_funnel | Where buyers stop on the payment page for a period (the same periods and days as summarize_payments): how many invoices were opened on the page or in the widget, had a wallet started or a transaction sent, saw a payment and were paid. Counts of invoices, nothing about the buyer. With several stores, each store and the total. |
+| get_checkout_trail | The payment page steps of one invoice, oldest first, from its creation to the outcome, each with the time it was first reached. |
 | list_unmatched_transfers | Payments to your Tron wallet that matched no invoice, usually an exchange that took its fee out of the amount. Read only: you attach them to invoices in the dashboard. |
 | search_docs | Up to five matching sections of the Stablevoy documentation. No key needed. |
 | get_doc | One whole documentation page as Markdown, or `openapi` (every API endpoint) or `errors` (every error code with what to do). Only Stablevoy pages are read. No key needed. |

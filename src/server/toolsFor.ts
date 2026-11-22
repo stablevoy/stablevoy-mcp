@@ -4,6 +4,8 @@ import type { StoreClients } from '../stores/StoreClients.js';
 import type { StoreDirectory } from '../stores/StoreDirectory.js';
 import { CancelInvoiceTool } from '../tools/CancelInvoiceTool.js';
 import { CreateInvoiceTool } from '../tools/CreateInvoiceTool.js';
+import { GetCheckoutFunnelTool } from '../tools/GetCheckoutFunnelTool.js';
+import { GetCheckoutTrailTool } from '../tools/GetCheckoutTrailTool.js';
 import { GetDocTool } from '../tools/GetDocTool.js';
 import { GetInvoiceTool } from '../tools/GetInvoiceTool.js';
 import { GetStoreTool } from '../tools/GetStoreTool.js';
@@ -30,6 +32,8 @@ export function toolsFor(stores: StoreClients | null, readOnly: boolean, docs: D
     new GetInvoiceTool(directory),
     new ListInvoicesTool(directory),
     new SummarizePaymentsTool(directory),
+    new GetCheckoutFunnelTool(directory),
+    new GetCheckoutTrailTool(directory),
     new ListUnmatchedTransfersTool(directory),
   ];
   const storeTools = readOnly ? reads : [...reads, new CreateInvoiceTool(directory), new CancelInvoiceTool(directory)];

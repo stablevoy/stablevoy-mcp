@@ -57,7 +57,7 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     const { client } = await serverWith([{ routes: storeRoutes('Main', 's1') }]);
     const { tools } = await client.listTools();
     const writes = ['cancel_invoice', 'create_invoice'];
-    expect(tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_doc', 'get_invoice', 'get_store', 'list_invoices', 'list_stores', 'list_unmatched_transfers', 'search_docs', 'summarize_payments']);
+    expect(tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_checkout_funnel', 'get_checkout_trail', 'get_doc', 'get_invoice', 'get_store', 'list_invoices', 'list_stores', 'list_unmatched_transfers', 'search_docs', 'summarize_payments']);
     expect(tools.find((t) => t.name === 'create_invoice')?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
     expect(tools.find((t) => t.name === 'cancel_invoice')?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, idempotentHint: true });
     expect(tools.filter((t) => !writes.includes(t.name)).every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
@@ -78,6 +78,8 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
       create_invoice: 'get_invoice',
       cancel_invoice: 'get_invoice',
       summarize_payments: 'list_invoices',
+      get_checkout_funnel: 'get_checkout_trail',
+      get_checkout_trail: 'get_checkout_funnel',
       list_unmatched_transfers: 'get_invoice',
       search_docs: 'get_doc',
       get_doc: 'search_docs',
@@ -365,6 +367,90 @@ describe('payment summary and unmatched transfers (spec SPEC-mcp-docs-summary-un
 
   it('turns millionths of a dollar into exact dollars', () => {
     expect([usdOfMicros('0'), usdOfMicros('5'), usdOfMicros('1000000'), usdOfMicros(123_456_789n)]).toEqual(['0.00', '0.000005', '1.00', '123.456789']);
+  });
+});
+
+describe('payment page funnel and trail (spec SPEC-checkout-analytics 10.1)', () => {
+  const funnel = example('GET', '/v1/store/checkout-funnel', 200);
+  const trail: Record<string, unknown> = { ...example('GET', '/v1/invoices/{invoiceId}/checkout-trail', 200), invoiceId: INVOICE };
+  const TRAIL_ROUTE = `GET /v1/invoices/${INVOICE}/checkout-trail`;
+  const funnelRoute = { 'GET /v1/store/checkout-funnel': () => ({ status: 200, body: funnel }) };
+
+  it('reads the funnel of one store, asking the API for the period or the days', async () => {
+    const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', funnelRoute) }]);
+    const result = await call('get_checkout_funnel', { period: 'last_30_days' });
+    expect(textOf(result)).toBe(`${String(funnel['invoices'])} invoices from ${String(funnel['createdFrom'])} to ${String(funnel['createdTo'])}: ${String(funnel['detected'])} saw a payment, ${String(funnel['paid'])} paid.\n${JSON.stringify(result.structuredContent, null, 2)}`);
+    expect(result.structuredContent).toEqual({ store: 'Main', ...funnel });
+    await call('get_checkout_funnel', { createdFrom: '2026-11-01', createdTo: '2026-11-30' });
+    expect(fakes[0]?.sent.filter((s) => s.key === 'GET /v1/store/checkout-funnel').map((s) => s.url.search)).toEqual(['?period=last_30_days', '?createdFrom=2026-11-01&createdTo=2026-11-30']);
+  });
+
+  it('gives each store and the total when several are connected', async () => {
+    const { call } = await serverWith([
+      { routes: storeRoutes('Main', 's1', funnelRoute), known: { id: 's1', name: 'Main' } },
+      { routes: storeRoutes('Second', 's2', { 'GET /v1/store/checkout-funnel': () => ({ status: 200, body: { ...funnel, invoices: 1, steps: { opened: 1 }, openedOn: { page: 1, widget: 0 }, detected: 0, paid: 0 } }) }), known: { id: 's2', name: 'Second' } },
+    ]);
+    const result = (await call('get_checkout_funnel', { period: 'this_month' })).structuredContent as { stores: { store: string }[]; total: Record<string, unknown> };
+    expect(result.stores.map((s) => s.store)).toEqual(['Main', 'Second']);
+    const steps = funnel['steps'] as Record<string, number>;
+    const openedOn = funnel['openedOn'] as Record<string, number>;
+    expect(result.total).toEqual({
+      createdFrom: funnel['createdFrom'],
+      createdTo: funnel['createdTo'],
+      invoices: (funnel['invoices'] as number) + 1,
+      steps: { ...steps, opened: (steps['opened'] ?? 0) + 1 },
+      openedOn: { page: (openedOn['page'] ?? 0) + 1, widget: openedOn['widget'] },
+      detected: funnel['detected'],
+      paid: funnel['paid'],
+    });
+  });
+
+  it.each([{}, { period: 'last_7_days', createdTo: '2026-11-30' }, { createdFrom: '2026-11-01' }])('refuses %j before calling the API', async (args) => {
+    const { call, fakes } = await serverWith([{ routes: storeRoutes('Main', 's1', funnelRoute) }]);
+    const refused = await call('get_checkout_funnel', args);
+    expect(refused.isError).toBe(true);
+    expect(textOf(refused)).toBe('Pass either period or both createdFrom and createdTo.');
+    expect(fakes[0]?.sent).toEqual([]);
+  });
+
+  it('passes a refusal of the API with what to do', async () => {
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store/checkout-funnel': () => ({ status: 429, body: problem(429, 'rate_limited', 'Slow down.') }) }) }]);
+    expect(textOf(await call('get_checkout_funnel', { period: 'last_7_days' }))).toMatch(/^rate_limited: Slow down\. Retry after \d+ seconds\.$/);
+  });
+
+  it('says one invoice in the singular', async () => {
+    const one = { ...funnel, invoices: 1, detected: 1, paid: 1 };
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store/checkout-funnel': () => ({ status: 200, body: one }) }) }]);
+    expect(textOf(await call('get_checkout_funnel', { period: 'last_7_days' }))).toMatch(/^1 invoice from .*: 1 saw a payment, 1 paid\.\n/);
+  });
+
+  it('reads the steps of one invoice, asking each store in turn', async () => {
+    const missing = { [TRAIL_ROUTE]: () => ({ status: 404, body: problem(404, 'not_found', 'Invoice not found') }) };
+    const found = { [TRAIL_ROUTE]: () => ({ status: 200, body: trail }) };
+    const { call } = await serverWith([
+      { routes: storeRoutes('Main', 's1', missing), known: { id: 's1', name: 'Main' } },
+      { routes: storeRoutes('Second', 's2', found), known: { id: 's2', name: 'Second' } },
+    ]);
+    const result = await call('get_checkout_trail', { invoiceId: INVOICE });
+    const steps = trail['steps'] as { step: string }[];
+    expect(textOf(result)).toMatch(new RegExp(`^Invoice ${INVOICE} of store "Second": ${String(steps.length)} steps, last ${String(steps.at(-1)?.step)}\\.\\n`));
+    expect(result.structuredContent).toEqual({ store: 'Second', ...trail });
+    const none = await serverWith([{ routes: storeRoutes('Main', 's1', missing), known: { id: 's1', name: 'Main' } }, { routes: storeRoutes('Second', 's2', missing), known: { id: 's2', name: 'Second' } }]);
+    expect(textOf(await none.call('get_checkout_trail', { invoiceId: INVOICE }))).toBe(`not_found: no connected store has invoice ${INVOICE}.`);
+  });
+
+  it('says one step in the singular, and a trail without steps plainly', async () => {
+    const one = { invoiceId: INVOICE, steps: [{ step: 'created', at: '2026-11-20T14:01:12.000Z', surface: null }] };
+    const single = await serverWith([{ routes: storeRoutes('Main', 's1', { [TRAIL_ROUTE]: () => ({ status: 200, body: one }) }) }]);
+    expect(textOf(await single.call('get_checkout_trail', { invoiceId: INVOICE }))).toMatch(/: 1 step, last created\.\n/);
+    const empty = await serverWith([{ routes: storeRoutes('Main', 's1', { [TRAIL_ROUTE]: () => ({ status: 200, body: { invoiceId: INVOICE, steps: [] } }) }) }]);
+    expect(textOf(await empty.call('get_checkout_trail', { invoiceId: INVOICE }))).toMatch(/: 0 steps\.\n/);
+  });
+
+  it('passes a failure other than not found', async () => {
+    const { call } = await serverWith([{ routes: storeRoutes('Main', 's1', { [TRAIL_ROUTE]: () => ({ status: 429, body: problem(429, 'rate_limited', 'Slow down.') }) }) }]);
+    expect(textOf(await call('get_checkout_trail', { invoiceId: INVOICE, store: 'Main' }))).toMatch(/^rate_limited: Slow down\./);
+    expect(textOf(await call('get_checkout_trail', { invoiceId: INVOICE }))).toMatch(/^rate_limited: Slow down\. Retry after \d+ seconds\.$/);
   });
 });
 

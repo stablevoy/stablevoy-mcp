@@ -96,7 +96,7 @@ describe('the CLI', () => {
     expect(await new Cli(deps()).run([])).toBe(0);
     expect(lines.pop()).toBe('No Stablevoy key: the store tools answer not_signed_in, the documentation works. Run npx stablevoy-mcp login, or set STABLEVOY_API_KEY in the MCP client config.');
     const keyless = await connectClient(served.shift() as McpServer);
-    expect((await keyless.client.listTools()).tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_doc', 'get_invoice', 'get_store', 'list_invoices', 'list_stores', 'list_unmatched_transfers', 'search_docs', 'summarize_payments']);
+    expect((await keyless.client.listTools()).tools.map((t) => t.name).sort()).toEqual(['cancel_invoice', 'create_invoice', 'get_checkout_funnel', 'get_checkout_trail', 'get_doc', 'get_invoice', 'get_store', 'list_invoices', 'list_stores', 'list_unmatched_transfers', 'search_docs', 'summarize_payments']);
     expect(keyless.client.getInstructions()).toBe(`${SERVER_INSTRUCTIONS} ${NOT_SIGNED_IN}`);
     expect(textOf(await keyless.call('search_docs', { query: 'create store' }))).toContain(NOT_SIGNED_IN);
     expect(textOf(await keyless.call('get_doc', { path: '/mcp.md' })).endsWith(`\n${NOT_SIGNED_IN}\n`)).toBe(true);

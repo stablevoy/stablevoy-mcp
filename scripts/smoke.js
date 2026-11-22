@@ -43,7 +43,7 @@ async function toolsOf(env) {
 }
 
 const withKey = await toolsOf({ STABLEVOY_API_KEY: 'sk_live_smoke', STABLEVOY_MCP_PROFILE: '' });
-const all = 'cancel_invoice,create_invoice,get_doc,get_invoice,get_store,list_invoices,list_stores,list_unmatched_transfers,search_docs,summarize_payments';
+const all = 'cancel_invoice,create_invoice,get_checkout_funnel,get_checkout_trail,get_doc,get_invoice,get_store,list_invoices,list_stores,list_unmatched_transfers,search_docs,summarize_payments';
 const prompts = 'client_payments,getting_started,payments_summary,review_unmatched_transfers,unpaid_invoices';
 const templates = 'stablevoy://docs/{+page}';
 const check = (run, label) => {

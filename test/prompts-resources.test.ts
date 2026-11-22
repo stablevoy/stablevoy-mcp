@@ -41,9 +41,9 @@ describe('keyless server (spec SPEC-mcp-prompts-resources 2)', () => {
   it('lists every tool, and each store tool answers not_signed_in without calling the API', async () => {
     const { client, call } = await keyless();
     const names = (await client.listTools()).tools.map((t) => t.name);
-    expect(names).toHaveLength(10);
-    for (const name of ['list_stores', 'get_store', 'get_invoice', 'list_invoices', 'summarize_payments', 'list_unmatched_transfers', 'create_invoice', 'cancel_invoice']) {
-      const result = await call(name, name === 'get_invoice' || name === 'cancel_invoice' ? { invoiceId: '00000000-0000-4000-8000-000000000000' } : name === 'create_invoice' ? { amountUsd: '10' } : {});
+    expect(names).toHaveLength(12);
+    for (const name of ['list_stores', 'get_store', 'get_invoice', 'list_invoices', 'summarize_payments', 'get_checkout_funnel', 'get_checkout_trail', 'list_unmatched_transfers', 'create_invoice', 'cancel_invoice']) {
+      const result = await call(name, name === 'get_invoice' || name === 'cancel_invoice' || name === 'get_checkout_trail' ? { invoiceId: '00000000-0000-4000-8000-000000000000' } : name === 'create_invoice' ? { amountUsd: '10' } : {});
       expect(result.isError, name).toBe(true);
       expect(textOf(result), name).toBe(NOT_SIGNED_IN_ERROR);
     }
@@ -54,7 +54,7 @@ describe('keyless server (spec SPEC-mcp-prompts-resources 2)', () => {
       const names = (await client.listTools()).tools.map((t) => t.name);
       expect(names).not.toContain('create_invoice');
       expect(names).not.toContain('cancel_invoice');
-      expect(names).toHaveLength(8);
+      expect(names).toHaveLength(10);
     }
   });
 

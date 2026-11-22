@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- get_checkout_funnel: where buyers stop on the payment page for the invoices created in a period (period, or createdFrom and createdTo, at most 92 days). How many were opened on the hosted page or in the widget, had the network or token changed, had the details copied, started a wallet, were refused or failed in the wallet, had a transaction sent, saw a payment and were paid. Counts of invoices, nothing about the buyer. With several stores, each store and the total.
+- get_checkout_trail: the payment page steps of one invoice, oldest first, each with the time it was first reached, from its creation to the outcome. Without store every connected store is asked.
+- Both are read-only and need a store key. Needs the stablevoy SDK 1.12.0.
+
 ## 0.8.0
 
 - create_invoice takes a price in the shop currency: `amount` (a decimal string, "49.99", or "1500" for JPY) with `currency` (ISO 4217, one of 30), instead of `amountUsd`. The price is turned into US dollars once, at creation, with the store's own rate or the ECB reference rate. Give one form only. Needs the stablevoy SDK 1.11.0.
