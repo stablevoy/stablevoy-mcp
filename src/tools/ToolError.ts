@@ -10,7 +10,7 @@ const HINTS: Readonly<Record<string, string>> = {
   networks_unavailable: 'No network can take payments right now. Try again in a few minutes.',
   amount_below_minimum: 'The amount is below the minimum invoice; call get_store for the limits.',
   amount_above_store_limit: 'The amount is above the store maximum; call get_store for the limits.',
-  amount_above_platform_cap: 'The amount is above the platform maximum; call get_store for the limits.',
+  amount_above_platform_cap: 'The amount is above the cap per invoice of this account; call get_store for the limits.',
   store_disabled: 'The store is disabled in the Stablevoy dashboard. Do not retry.',
   store_archived: 'The store is archived in the Stablevoy dashboard. Restore it there and reconnect. Do not retry.',
   invoice_not_cancellable: 'A payment has already been seen, or the invoice is no longer waiting for one; call get_invoice for its status. Do not retry.',

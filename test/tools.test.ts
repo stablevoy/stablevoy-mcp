@@ -107,6 +107,13 @@ describe('the MCP server (spec SPEC-mcp-server 3.3)', () => {
     expect(textOf(result)).toMatch(/^Store "Main" is active; invoices from \d+\.\d\d to \d+\.\d\d USD\./);
   });
 
+  it('shows the invoice range the API gives for the store, also above the platform cap for a raised account', async () => {
+    const raised = await serverWith([{ routes: storeRoutes('Main', 's1', { 'GET /v1/store': () => ({ status: 200, body: { ...example('GET', '/v1/store', 200), id: 's1', name: 'Main', invoiceRange: { minUsdCents: 500, maxUsdCents: 20_000_000 } } }) }) }]);
+    const result = await raised.call('get_store');
+    expect(result.structuredContent).toMatchObject({ invoiceRangeUsd: { min: '5.00', max: '200000.00' }, platformLimitsUsd: { max: '1000.00' } });
+    expect(textOf(result)).toContain('invoices from 5.00 to 200000.00 USD');
+  });
+
   it('reads where each payout address comes from, the account addresses and the archive date (store payout addresses)', async () => {
     const own = { payoutAddresses: { evm: '0x' + 'cc'.repeat(20), tron: null }, payoutSources: { evm: 'store', tron: null }, accountPayoutAddresses: { evm: '0x' + 'bb'.repeat(20), tron: null } };
     const store = { ...example('GET', '/v1/store', 200), id: 's1', name: 'Main', ...own };

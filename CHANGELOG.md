@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+- get_store: `invoiceRangeUsd` and the first line of the answer come from the range the API gives for the store, so an account with a higher (or lower) cap per invoice set on request shows its own range instead of the platform default. `storeLimitsUsd` and `platformLimitsUsd` are unchanged.
+- create_invoice: the error `amount_above_platform_cap` now says it is the cap of the account.
+- Needs the stablevoy SDK 1.13.0.
+
 ## 0.9.0
 
 - get_checkout_funnel: where buyers stop on the payment page for the invoices created in a period (period, or createdFrom and createdTo, at most 92 days). How many were opened on the hosted page or in the widget, had the network or token changed, had the details copied, started a wallet, were refused or failed in the wallet, had a transaction sent, saw a payment and were paid. Counts of invoices, nothing about the buyer. With several stores, each store and the total.
