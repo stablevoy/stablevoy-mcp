@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.2
+
+- create_invoice: the description says returnUrl must be a page of the store's own website (the domain set on the store), and names the errors return_url_off_site and return_url_without_website, which the API now returns for any other return address.
+- The bundled OpenAPI snapshot of the tests lists those errors and the key-public sign-in and payout errors.
+
 ## 0.9.1
 
 - get_store: `invoiceRangeUsd` and the first line of the answer come from the range the API gives for the store, so an account with a higher (or lower) cap per invoice set on request shows its own range instead of the platform default. `storeLimitsUsd` and `platformLimitsUsd` are unchanged.
